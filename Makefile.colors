@@ -1,0 +1,15 @@
+# ============================================================================
+# Makefile.colors
+# ----------------------------------------------------------------------------
+# FR: Couleurs ANSI optionnelles pour les messages du Makefile.
+# EN: Optional ANSI colors for Makefile output.
+# ============================================================================
+
+TERM_RESET   := \033[0m
+TERM_BOLD    := \033[1m
+TERM_RED     := \033[31m
+TERM_GREEN   := \033[32m
+TERM_YELLOW  := \033[33m
+TERM_BLUE    := \033[34m
+TERM_MAGENTA := \033[35m
+TERM_CYAN    := \033[36m
