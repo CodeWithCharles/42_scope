@@ -15,8 +15,21 @@ namespace Scop
 			throw std::runtime_error("Failed to open OBJ file: " + path);
 
 		std::vector<Math::Vec3> positions;
+		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 
+		const Math::Vec3 colorPalette[] = {
+			{1.0f, 0.0f, 0.0f},
+			{0.0f, 1.0f, 0.0f},
+			{0.0f, 0.0f, 1.0f},
+			{1.0f, 1.0f, 0.0f},
+			{0.0f, 1.0f, 1.0f},
+			{1.0f, 0.0f, 1.0f},
+			{1.0f, 0.5f, 0.0f},
+			{0.7f, 0.7f, 0.7f}
+		};
+
+		std::size_t faceIndex = 0;
 		std::string line;
 		while (std::getline(file, line))
 		{
@@ -44,22 +57,43 @@ namespace Scop
 				if (a == 0 || b == 0 || c == 0)
 					throw std::runtime_error("OBJ face indices must start at 1");
 
-				indices.push_back(a - 1);
-				indices.push_back(b - 1);
-				indices.push_back(c - 1);
+				unsigned int indexA = a - 1;
+				unsigned int indexB = b - 1;
+				unsigned int indexC = c - 1;
+
+				if (indexA >= positions.size() || indexB >= positions.size() || indexC >= positions.size())
+					throw std::runtime_error("OBJ face index out of bounds");
+
+				const std::size_t paletteSize = sizeof(colorPalette) / sizeof(colorPalette[0]);
+				Math::Vec3 faceColor = colorPalette[faceIndex % paletteSize];
+
+				unsigned int indexOffset = static_cast<unsigned int>(vertices.size());
+
+				Vertex v0;
+				v0.position = positions[indexA];
+				v0.color = faceColor;
+				v0.uv = {0.0f, 0.0f};
+
+				Vertex v1;
+				v1.position = positions[indexB];
+				v1.color = faceColor;
+				v1.uv = {0.0f, 0.0f};
+
+				Vertex v2;
+				v2.position = positions[indexC];
+				v2.color = faceColor;
+				v2.uv = {0.0f, 0.0f};
+
+				vertices.push_back(v0);
+				vertices.push_back(v1);
+				vertices.push_back(v2);
+
+				indices.push_back(indexOffset + 0);
+				indices.push_back(indexOffset + 1);
+				indices.push_back(indexOffset + 2);
+
+				++faceIndex;
 			}
-		}
-
-		std::vector<Vertex> vertices;
-		vertices.reserve(positions.size());
-
-		for (std::size_t i = 0; i < positions.size(); ++i)
-		{
-			Vertex vertex;
-			vertex.position = positions[i];
-			vertex.color = { 1.0f, 1.0f, 1.0f };
-			vertex.uv = { 0.0f, 0.0f };
-			vertices.push_back(vertex);
 		}
 
 		return new Mesh(vertices, indices);
