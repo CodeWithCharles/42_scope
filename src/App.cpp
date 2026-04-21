@@ -130,7 +130,9 @@ namespace Scop
 		});
 
 		Math::Mat4 scale = Math::Mat4::scale({scaleFactor, scaleFactor, scaleFactor});
-		Math::Mat4 rotation = Math::Mat4::rotationY(m_rotationAngle);
+		Math::Mat4 importRotation = Math::Mat4::rotationX(Config::MODEL_IMPORT_ROTATION_X_RADIANS);
+		Math::Mat4 animationRotation = Math::Mat4::rotationY(m_rotationAngle);
+		Math::Mat4 rotation = animationRotation * importRotation;
 		Math::Mat4 backToCenter = Math::Mat4::translation(center);
 		Math::Mat4 translation = Math::Mat4::translation(m_position);
 

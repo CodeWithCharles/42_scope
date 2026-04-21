@@ -6,6 +6,66 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+	struct FaceVertex
+	{
+		int	positionIndex;
+		int	textureIndex;
+		int	normalIndex;
+	};
+
+	std::vector<std::string>	split(const std::string& value, char delimiter)
+	{
+		std::vector<std::string>	parts;
+		std::string					current;
+
+		for (std::size_t i = 0; i < value.size(); ++i)
+		{
+			if (value[i] == delimiter)
+			{
+				parts.push_back(current);
+				current.clear();
+			}
+			else
+				current += value[i];
+		}
+		parts.push_back(current);
+		return parts;
+	}
+
+	int	parseObjIndex(const std::string& token)
+	{
+		if (token.empty())
+			throw std::runtime_error("OBJ index token is empty");
+
+		int index = std::stoi(token);
+		if (index <= 0)
+			throw std::runtime_error("OBJ indices must start at 1");
+
+		return index - 1;
+	}
+
+	FaceVertex	parseFaceVertexToken(const std::string& token)
+	{
+		FaceVertex result = {-1, -1, -1};
+		std::vector<std::string> parts = split(token, '/');
+
+		if (parts.empty() || parts[0].empty())
+			throw std::runtime_error("OBJ face token is missing a position index");
+
+		result.positionIndex = parseObjIndex(parts[0]);
+
+		if (parts.size() > 1 && !parts[1].empty())
+			result.textureIndex = parseObjIndex(parts[1]);
+
+		if (parts.size() > 2 && !parts[2].empty())
+			result.normalIndex = parseObjIndex(parts[2]);
+
+		return result;
+	}
+}
+
 namespace Scop
 {
 	Mesh*	ObjLoader::load(const std::string& path)

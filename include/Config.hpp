@@ -17,6 +17,8 @@ namespace Scop::Config
 	inline constexpr float	CLEAR_BLUE							= 0.12f;
 	inline constexpr float	CLEAR_ALPHA							= 1.0f;
 
+	inline constexpr float	MODEL_IMPORT_ROTATION_X_RADIANS =	-1.5708f;
+
 	inline constexpr float	CAMERA_DISTANCE						= 2.0f;
 
 	inline constexpr float	PROJECTION_FOV_RADIANS				= 1.0472f;
@@ -24,7 +26,7 @@ namespace Scop::Config
 	inline constexpr float	PROJECTION_FAR_PLANE				= 100.0f;
 
 	inline constexpr float	ROTATION_SPEED_RADIANS_PER_SECOND	= 1.0f;
-	inline constexpr float TRANSLATION_SPEED_UNITS_PER_SECOND	= 1.5f;
+	inline constexpr float	TRANSLATION_SPEED_UNITS_PER_SECOND	= 1.5f;
 
 	inline constexpr bool	START_WITH_VSYNC					= true;
 
