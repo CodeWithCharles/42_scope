@@ -17,7 +17,8 @@ namespace Scope
 			Config::WINDOW_TITLE),
 		  m_isRunning(false),
 		  m_shader(nullptr),
-		  m_mesh(nullptr)
+		  m_mesh(nullptr),
+		  m_rotationAngle(0.0f)
 	{
 	}
 
@@ -33,6 +34,10 @@ namespace Scope
 
 		while (m_isRunning && !m_window.shouldClose())
 		{
+			float currentFrameTime = static_cast<float>(glfwGetTime());
+			m_deltaTime = currentFrameTime - m_lastFrameTime;
+			m_lastFrameTime = currentFrameTime;
+
 			processInput();
 			update();
 			render();
@@ -68,7 +73,7 @@ namespace Scope
 
 	void	App::update()
 	{
-		// Phase 1: vide
+		m_rotationAngle += Config::ROTATION_SPEED_RADIANS_PER_SECOND * m_deltaTime;
 	}
 
 	void	App::render()
@@ -80,12 +85,17 @@ namespace Scope
 			Config::CLEAR_ALPHA);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		Math::Mat4 model = Math::Mat4::identity();
-		Math::Mat4 view = Math::Mat4::translation({0.0f, 0.0f, -2.0f});
+		Math::Mat4 model = Math::Mat4::rotationY(m_rotationAngle);
+		Math::Mat4 view = Math::Mat4::translation({0.0f, 0.0f, -Config::CAMERA_DISTANCE});
 
 		float aspectRatio = static_cast<float>(m_window.getWidth())
 			/ static_cast<float>(m_window.getHeight());
-		Math::Mat4 projection = Math::Mat4::perspective(1.0472f, aspectRatio, 0.1f, 100.0f);
+
+		Math::Mat4 projection = Math::Mat4::perspective(
+			Config::PROJECTION_FOV_RADIANS,
+			aspectRatio,
+			Config::PROJECTION_NEAR_PLANE,
+			Config::PROJECTION_FAR_PLANE);
 
 		Math::Mat4 mvp = projection * view * model;
 

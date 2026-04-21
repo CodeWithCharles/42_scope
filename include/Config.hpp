@@ -21,9 +21,9 @@ namespace Scope::Config
 
 	inline constexpr float	PROJECTION_FOV_RADIANS	= 1.0472f;
 	inline constexpr float	PROJECTION_NEAR_PLANE	= 0.1f;
-	inline constexpr float	PROJECT_FAR_PLANE		= 100.0f;
+	inline constexpr float	PROJECTION_FAR_PLANE	= 100.0f;
 
-	inline constexpr float	ROTATION_SPEED			= 1.0f;
+	inline constexpr float	ROTATION_SPEED_RADIANS_PER_SECOND			= 1.0f;
 
 	inline constexpr bool	START_WITH_VSYNC		= true;
 }

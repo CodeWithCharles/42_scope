@@ -17,6 +17,8 @@ namespace Scope
 			Shader	*m_shader;
 			Mesh	*m_mesh;
 			float	m_rotationAngle;
+			float	m_deltaTime;
+			float	m_lastFrameTime;
 
 		public:
 			App();
