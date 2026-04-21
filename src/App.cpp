@@ -5,6 +5,8 @@
 #include "Config.hpp"
 
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace Scope
 {
@@ -13,21 +15,18 @@ namespace Scope
 			Config::WINDOW_WIDTH,
 			Config::WINDOW_HEIGHT,
 			Config::WINDOW_TITLE),
-		  m_isRunning(false)
-		// //! A RETIRER UNE FOIS LE TEST FAIT
-		// m_shader(nullptr),
-		// m_vao(0),
-		// m_vbo(0)
+		  m_isRunning(false),
+		  m_shader(nullptr),
+		  m_mesh(nullptr)
 	{
 	}
 
 	App::~App()
 	{
-		// //! A RETIRER UNE FOIS LE TEST FAIT
-		// cleanupDemoTriangle();
+		cleanupScene();
 	}
 
-	void App::run()
+	void	App::run()
 	{
 		init();
 		m_isRunning = true;
@@ -42,38 +41,37 @@ namespace Scope
 		}
 	}
 
-	void App::init()
+	void	App::init()
 	{
 		initGlad();
 		configureOpenGL();
-		// //! A RETIRER UNE FOIS LE TEST FAIT
-		// initDemoTriangle();
+		initScene();
 	}
 
-	void App::initGlad()
+	void	App::initGlad()
 	{
 		if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) == 0)
 			throw std::runtime_error("Failed to initialize GLAD");
 	}
 
-	void App::configureOpenGL()
+	void	App::configureOpenGL()
 	{
 		glViewport(0, 0, m_window.getWidth(), m_window.getHeight());
 		glEnable(GL_DEPTH_TEST);
 	}
 
-	void App::processInput()
+	void	App::processInput()
 	{
 		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			m_window.setShouldClose(true);
 	}
 
-	void App::update()
+	void	App::update()
 	{
 		// Phase 1: vide
 	}
 
-	void App::render()
+	void	App::render()
 	{
 		glClearColor(
 			Config::CLEAR_RED,
@@ -82,76 +80,60 @@ namespace Scope
 			Config::CLEAR_ALPHA);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// //! A RETIRER UNE FOIS LE TEST FAIT
-		// m_shader->use();
-		// glBindVertexArray(m_vao);
-		// glDrawArrays(GL_TRIANGLES, 0, 3);
-		// glBindVertexArray(0);
+		m_shader->use();
+		m_mesh->draw();
 	}
 
-	// void App::initDemoTriangle()
-	// {
-	// 	//! A RETIRER UNE FOIS LE TEST FAIT
-	// 	const std::string vertexShaderSource =
-	// 		"#version 410 core\n"
-	// 		"layout (location = 0) in vec3 aPos;\n"
-	// 		"\n"
-	// 		"void main()\n"
-	// 		"{\n"
-	// 		"    gl_Position = vec4(aPos, 1.0);\n"
-	// 		"}\n";
+	void	App::initScene()
+	{
+		const std::string	vertexShaderSource =
+			"#version 410 core\n"
+			"layout (location = 0) in vec3 aPos;\n"
+			"layout (location = 1) in vec3 aColor;\n"
+			"\n"
+			"out vec3 vColor;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"	gl_Position = vec4(aPos, 1.0);\n"
+			"	vColor = aColor;\n"
+			"}\n";
 
-	// 	const std::string fragmentShaderSource =
-	// 		"#version 410 core\n"
-	// 		"out vec4 FragColor;\n"
-	// 		"\n"
-	// 		"void main()\n"
-	// 		"{\n"
-	// 		"    FragColor = vec4(0.1, 0.2, 0.8, 1.0);\n"
-	// 		"}\n";
+		const std::string	fragmentShaderSource =
+			"#version 410 core\n"
+			"in vec3 vColor;\n"
+			"\n"
+			"out vec4 FragColor;\n"
+			"\n"
+			"void main()\n"
+			"{\n"
+			"	FragColor = vec4(vColor, 1.0);\n"
+			"}\n";
 
-	// 	const float vertices[] = {
-	// 		0.0f,  0.5f, 0.0f,
-	// 		-0.5f, -0.5f, 0.0f,
-	// 		0.5f, -0.5f, 0.0f
-	// 	};
+		const std::vector<Vertex>	vertices = {
+			{{ 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.5f, 1.0f }},
+			{{ -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f }},
+			{{ 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f }}
+		};
 
-	// 	m_shader = new Shader(vertexShaderSource, fragmentShaderSource);
+		const std::vector<unsigned int>	indices;
 
-	// 	glGenVertexArrays(1, &m_vao);
-	// 	glGenBuffers(1, &m_vbo);
+		m_shader = new Shader(vertexShaderSource, fragmentShaderSource);
+		m_mesh = new Mesh(vertices, indices);
+	}
 
-	// 	glBindVertexArray(m_vao);
+	void	App::cleanupScene()
+	{
+		if (m_mesh != nullptr)
+		{
+			delete m_mesh;
+			m_mesh = nullptr;
+		}
 
-	// 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-	// 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	// 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
-	// 	glEnableVertexAttribArray(0);
-
-	// 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	// 	glBindVertexArray(0);
-	// }
-
-	// void App::cleanupDemoTriangle()
-	// {
-	// 	if (m_vbo != 0)
-	// 	{
-	// 		glDeleteBuffers(1, &m_vbo);
-	// 		m_vbo = 0;
-	// 	}
-
-	// 	if (m_vao != 0)
-	// 	{
-	// 		glDeleteVertexArrays(1, &m_vao);
-	// 		m_vao = 0;
-	// 	}
-
-	// 	if (m_shader != nullptr)
-	// 	{
-	// 		delete m_shader;
-	// 		m_shader = nullptr;
-	// 	}
-	// }
-
+		if (m_shader != nullptr)
+		{
+			delete m_shader;
+			m_shader = nullptr;
+		}
+	}
 }

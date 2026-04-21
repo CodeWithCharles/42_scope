@@ -1,27 +1,17 @@
 #pragma once
 
+#include "math/Vec2.hpp"
+#include "math/Vec3.hpp"
+
 #include <cstddef>
 
 namespace Scope
 {
-	struct	Vec2f
-	{
-		float	x;
-		float	y;
-	};
-
-	struct	Vec3f
-	{
-		float	x;
-		float	y;
-		float	z;
-	};
-
 	struct	Vertex
 	{
-		Vec3f	position;
-		Vec3f	color;
-		Vec2f	uv;
+		Math::Vec3	position;
+		Math::Vec3	color;
+		Math::Vec2	uv;
 
 		static constexpr	unsigned int	POSITION_LOCATION = 0;
 		static constexpr	unsigned int	COLOR_LOCATION = 1;

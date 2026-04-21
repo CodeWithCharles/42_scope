@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Window.hpp"
-//! A RETIRER UNE FOIS LE TEST FAIT
 #include "Shader.hpp"
+#include "Mesh.hpp"
 
 namespace Scope
 {
@@ -11,10 +11,8 @@ namespace Scope
 		private:
 			Window	m_window;
 			bool	m_isRunning;
-			// //! A RETIRER UNE FOIS LE TEST FAIT
-			// Shader*	m_shader;
-			// unsigned int	m_vao;
-			// unsigned int	m_vbo;
+			Shader	*m_shader;
+			Mesh	*m_mesh;
 
 		public:
 			App();
@@ -32,8 +30,7 @@ namespace Scope
 			void	processInput();
 			void	update();
 			void	render();
-			// //! A RETIRER UNE FOIS LE TEST FAIT
-			// void	initDemoTriangle();
-			// void	cleanupDemoTriangle();
+			void	initScene();
+			void	cleanupScene();
 	};
 }
