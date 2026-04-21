@@ -3,6 +3,7 @@
 
 #include "App.hpp"
 #include "Config.hpp"
+#include "ObjLoader.hpp"
 
 #include <stdexcept>
 #include <string>
@@ -109,16 +110,8 @@ namespace Scope
 		const std::string	vertexShaderPath = "assets/shaders/basic.vert";
 		const std::string	fragmentShaderPath = "assets/shaders/basic.frag";
 
-		const std::vector<Vertex>	vertices = {
-			{{ 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.5f, 1.0f }},
-			{{ -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f }},
-			{{ 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f }}
-		};
-
-		const std::vector<unsigned int>	indices;
-
 		m_shader = new Shader(vertexShaderPath, fragmentShaderPath);
-		m_mesh = new Mesh(vertices, indices);
+		m_mesh = ObjLoader::load(Config::MODEL_PATH);
 	}
 
 	void	App::cleanupScene()

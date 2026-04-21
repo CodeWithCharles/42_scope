@@ -26,4 +26,6 @@ namespace Scope::Config
 	inline constexpr float	ROTATION_SPEED_RADIANS_PER_SECOND			= 1.0f;
 
 	inline constexpr bool	START_WITH_VSYNC		= true;
+
+	inline constexpr char	MODEL_PATH[]			= "assets/models/test.obj";
 }
