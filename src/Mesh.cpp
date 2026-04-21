@@ -4,7 +4,7 @@
 
 #include <cstddef>
 
-namespace Scope
+namespace Scop
 {
 	Mesh::Mesh(const std::vector<Vertex>& vertices,
 		const std::vector<unsigned int>& indices)
@@ -14,6 +14,7 @@ namespace Scope
 			m_vbo(0),
 			m_ebo(0)
 	{
+		computeBounds();
 		setupMesh();
 	}
 
@@ -68,9 +69,72 @@ namespace Scope
 		return m_indices;
 	}
 
+	const Math::Vec3&	Mesh::getMinBounds() const
+	{
+		return m_minBounds;
+	}
+
+	const Math::Vec3&	Mesh::getMaxBounds() const
+	{
+		return m_maxBounds;
+	}
+
+	const Math::Vec3&	Mesh::getCenter() const
+	{
+		return m_center;
+	}
+
+	Math::Vec3	Mesh::getSize() const
+	{
+		return {
+			m_maxBounds.x - m_minBounds.x,
+			m_maxBounds.y - m_minBounds.y,
+			m_maxBounds.z - m_minBounds.z
+		};
+	}
+
 	bool	Mesh::hasIndices() const
 	{
 		return !m_indices.empty();
+	}
+
+	void	Mesh::computeBounds()
+	{
+		if (m_vertices.empty())
+		{
+			m_minBounds = { 0.0f, 0.0f, 0.0f };
+			m_maxBounds = { 0.0f, 0.0f, 0.0f };
+			m_center = { 0.0f, 0.0f, 0.0f };
+			return;
+		}
+
+		m_minBounds = m_vertices[0].position;
+		m_maxBounds = m_vertices[0].position;
+
+		for (std::size_t i = 1; i < m_vertices.size(); ++i)
+		{
+			const Math::Vec3& position = m_vertices[i].position;
+
+			if (position.x < m_minBounds.x)
+				m_minBounds.x = position.x;
+			if (position.y < m_minBounds.y)
+				m_minBounds.y = position.y;
+			if (position.z < m_minBounds.z)
+				m_minBounds.z = position.z;
+
+			if (position.x > m_maxBounds.x)
+				m_maxBounds.x = position.x;
+			if (position.y > m_maxBounds.y)
+				m_maxBounds.y = position.y;
+			if (position.z > m_maxBounds.z)
+				m_maxBounds.z = position.z;
+		}
+
+		m_center = {
+			(m_minBounds.x + m_maxBounds.x) * 0.5f,
+			(m_minBounds.y + m_maxBounds.y) * 0.5f,
+			(m_minBounds.z + m_maxBounds.z) * 0.5f
+		};
 	}
 
 	void	Mesh::setupMesh()

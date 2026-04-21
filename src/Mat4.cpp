@@ -1,7 +1,7 @@
 #include "math/Mat4.hpp"
 #include <cmath>
 
-namespace Scope::Math
+namespace Scop::Math
 {
 	Mat4	Mat4::identity()
 	{

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Scope::Math
+namespace Scop::Math
 {
 	struct Vec2
 	{

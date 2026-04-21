@@ -2,7 +2,7 @@
 
 #include "math/Vec3.hpp"
 
-namespace Scope::Math
+namespace Scop::Math
 {
 	struct Mat4
 	{

@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace Scope
+namespace Scop
 {
 	class ObjLoader
 	{

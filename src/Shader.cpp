@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace Scope
+namespace Scop
 {
 	Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath)
 		: m_programId(0)

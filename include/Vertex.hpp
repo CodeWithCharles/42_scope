@@ -5,7 +5,7 @@
 
 #include <cstddef>
 
-namespace Scope
+namespace Scop
 {
 	struct	Vertex
 	{

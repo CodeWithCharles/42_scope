@@ -6,7 +6,7 @@ int	main()
 {
 	try
 	{
-		Scope::App app;
+		Scop::App app;
 		app.run();
 	}
 	catch (const std::exception& e)

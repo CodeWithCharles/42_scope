@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace Scope
+namespace Scop
 {
 	class Mesh
 	{

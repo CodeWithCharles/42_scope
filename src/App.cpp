@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace Scope
+namespace Scop
 {
 	App::App()
 		: m_window(
@@ -19,7 +19,8 @@ namespace Scope
 		  m_isRunning(false),
 		  m_shader(nullptr),
 		  m_mesh(nullptr),
-		  m_rotationAngle(0.0f)
+		  m_rotationAngle(0.0f),
+		  m_position({0.0f, 0.0f, 0.0f})
 	{
 	}
 
@@ -70,7 +71,24 @@ namespace Scope
 	void	App::processInput()
 	{
 		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			m_window.setShouldClose(true);
+		m_window.setShouldClose(true);
+
+		float translationStep = Config::TRANSLATION_SPEED_UNITS_PER_SECOND * m_deltaTime;
+
+		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_A) == GLFW_PRESS)
+			m_position.x += translationStep;
+		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_D) == GLFW_PRESS)
+			m_position.x -= translationStep;
+
+		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_S) == GLFW_PRESS)
+			m_position.y += translationStep;
+		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_W) == GLFW_PRESS)
+			m_position.y -= translationStep;
+
+		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_Q) == GLFW_PRESS)
+			m_position.z -= translationStep;
+		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_E) == GLFW_PRESS)
+			m_position.z += translationStep;
 	}
 
 	void	App::update()
@@ -91,7 +109,32 @@ namespace Scope
 			Config::CLEAR_ALPHA);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		Math::Mat4 model = Math::Mat4::rotationY(m_rotationAngle);
+		Math::Vec3 center = m_mesh->getCenter();
+		Math::Vec3 size = m_mesh->getSize();
+
+		float maxExtent = size.x;
+
+		if (size.y > maxExtent)
+			maxExtent = size.y;
+		if (size.z > maxExtent)
+			maxExtent = size.z;
+
+		float scaleFactor = 1.0f;
+		if (maxExtent > 0.0f)
+			scaleFactor = 1.0f / maxExtent;
+
+		Math::Mat4 toOrigin = Math::Mat4::translation({
+			-center.x,
+			-center.y,
+			-center.z
+		});
+
+		Math::Mat4 scale = Math::Mat4::scale({scaleFactor, scaleFactor, scaleFactor});
+		Math::Mat4 rotation = Math::Mat4::rotationY(m_rotationAngle);
+		Math::Mat4 backToCenter = Math::Mat4::translation(center);
+		Math::Mat4 translation = Math::Mat4::translation(m_position);
+
+		Math::Mat4 model = translation * backToCenter * rotation * scale * toOrigin;
 		Math::Mat4 view = Math::Mat4::translation({0.0f, 0.0f, -Config::CAMERA_DISTANCE});
 
 		float aspectRatio = static_cast<float>(m_window.getWidth())

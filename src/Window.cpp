@@ -6,7 +6,7 @@
 
 #include <stdexcept>
 
-namespace Scope
+namespace Scop
 {
 	bool Window::isInitialized = false;
 	void Window::initGlfw()

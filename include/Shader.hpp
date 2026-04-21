@@ -3,7 +3,7 @@
 #include "math/Mat4.hpp"
 #include <string>
 
-namespace Scope
+namespace Scop
 {
 	class Shader
 	{
