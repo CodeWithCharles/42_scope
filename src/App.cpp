@@ -32,6 +32,7 @@ namespace Scope
 	{
 		init();
 		m_isRunning = true;
+		m_lastFrameTime = static_cast<float>(glfwGetTime());
 
 		while (m_isRunning && !m_window.shouldClose())
 		{
@@ -74,6 +75,10 @@ namespace Scope
 
 	void	App::update()
 	{
+		if (m_deltaTime < 0.0f)
+			return;
+		if (m_deltaTime > 0.1f)
+			m_deltaTime = 0.1f;
 		m_rotationAngle += Config::ROTATION_SPEED_RADIANS_PER_SECOND * m_deltaTime;
 	}
 

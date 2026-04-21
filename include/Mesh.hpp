@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vertex.hpp"
+#include "math/Vec3.hpp"
 
 #include <vector>
 
@@ -15,6 +16,10 @@ namespace Scope
 			unsigned int				m_vao;
 			unsigned int				m_vbo;
 			unsigned int				m_ebo;
+
+			Math::Vec3					m_minBounds;
+			Math::Vec3					m_maxBounds;
+			Math::Vec3					m_center;
 
 		public:
 			Mesh(const std::vector<Vertex>& vertices,
@@ -32,8 +37,14 @@ namespace Scope
 			const std::vector<Vertex>&			getVertices() const;
 			const std::vector<unsigned int>&	getIndices() const;
 
+			const Math::Vec3&	getMinBounds() const;
+			const Math::Vec3&	getMaxBounds() const;
+			const Math::Vec3&	getCenter() const;
+			Math::Vec3			getSize() const;
+
 		private:
 			void	setupMesh();
 			bool	hasIndices() const;
+			void	computeBounds();
 	};
 }
