@@ -80,7 +80,17 @@ namespace Scope
 			Config::CLEAR_ALPHA);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		Math::Mat4 model = Math::Mat4::identity();
+		Math::Mat4 view = Math::Mat4::translation({0.0f, 0.0f, -2.0f});
+
+		float aspectRatio = static_cast<float>(m_window.getWidth())
+			/ static_cast<float>(m_window.getHeight());
+		Math::Mat4 projection = Math::Mat4::perspective(1.0472f, aspectRatio, 0.1f, 100.0f);
+
+		Math::Mat4 mvp = projection * view * model;
+
 		m_shader->use();
+		m_shader->setMat4("uMVP", mvp);
 		m_mesh->draw();
 	}
 
@@ -93,9 +103,11 @@ namespace Scope
 			"\n"
 			"out vec3 vColor;\n"
 			"\n"
+			"uniform mat4 uMVP;"
+			"\n"
 			"void main()\n"
 			"{\n"
-			"	gl_Position = vec4(aPos, 1.0);\n"
+			"	gl_Position = uMVP * vec4(aPos, 1.0);\n"
 			"	vColor = aColor;\n"
 			"}\n";
 

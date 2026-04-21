@@ -41,17 +41,26 @@ namespace Scope
 		}
 	}
 
-	void Shader::use() const
+	void	Shader::use() const
 	{
 		glUseProgram(m_programId);
 	}
 
-	unsigned int Shader::getProgramId() const
+	void	Shader::setMat4(const std::string& uniformName, const Math::Mat4& matrix) const
+	{
+		int location = glGetUniformLocation(m_programId, uniformName.c_str());
+		if (location == -1)
+			return;
+
+		glUniformMatrix4fv(location, 1, GL_FALSE, matrix.raw());
+	}
+
+	unsigned int	Shader::getProgramId() const
 	{
 		return m_programId;
 	}
 
-	unsigned int Shader::compileShader(unsigned int shaderType, const std::string &source)
+	unsigned int	Shader::compileShader(unsigned int shaderType, const std::string &source)
 	{
 		unsigned int shaderId = glCreateShader(shaderType);
 		if (shaderId == 0)
@@ -79,7 +88,7 @@ namespace Scope
 		return shaderId;
 	}
 
-	void Shader::linkProgram(unsigned int vertexShaderId, unsigned int fragmentShaderId)
+	void	Shader::linkProgram(unsigned int vertexShaderId, unsigned int fragmentShaderId)
 	{
 		unsigned int programId = glCreateProgram();
 		if (programId == 0)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "math/Mat4.hpp"
 #include <string>
 
 namespace Scope
@@ -20,6 +21,7 @@ namespace Scope
 			Shader& operator=(Shader&&) = delete;
 
 			void			use() const;
+			void			setMat4(const std::string& uniformName, const Math::Mat4& matrix) const;
 			unsigned int	getProgramId() const;
 
 		private:

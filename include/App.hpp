@@ -4,6 +4,9 @@
 #include "Shader.hpp"
 #include "Mesh.hpp"
 
+#include "math/Mat4.hpp"
+#include "math/Vec3.hpp"
+
 namespace Scope
 {
 	class App
@@ -13,6 +16,7 @@ namespace Scope
 			bool	m_isRunning;
 			Shader	*m_shader;
 			Mesh	*m_mesh;
+			float	m_rotationAngle;
 
 		public:
 			App();
