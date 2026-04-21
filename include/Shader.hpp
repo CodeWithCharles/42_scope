@@ -11,7 +11,7 @@ namespace Scope
 			unsigned int	m_programId;
 
 		public:
-			Shader(const std::string& vertexSource, const std::string& fragmentSource);
+			Shader(const std::string& vertexPath, const std::string& fragmentPath);
 			~Shader();
 
 			Shader(const Shader&) = delete;
@@ -27,5 +27,7 @@ namespace Scope
 		private:
 			unsigned int	compileShader(unsigned int shaderType, const std::string& source);
 			void			linkProgram(unsigned int vertexShaderId, unsigned int fragmentShaderId);
+
+			std::string		loadFileContent(const std::string& path) const;
 	};
 }

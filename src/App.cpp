@@ -106,31 +106,8 @@ namespace Scope
 
 	void	App::initScene()
 	{
-		const std::string	vertexShaderSource =
-			"#version 410 core\n"
-			"layout (location = 0) in vec3 aPos;\n"
-			"layout (location = 1) in vec3 aColor;\n"
-			"\n"
-			"out vec3 vColor;\n"
-			"\n"
-			"uniform mat4 uMVP;"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	gl_Position = uMVP * vec4(aPos, 1.0);\n"
-			"	vColor = aColor;\n"
-			"}\n";
-
-		const std::string	fragmentShaderSource =
-			"#version 410 core\n"
-			"in vec3 vColor;\n"
-			"\n"
-			"out vec4 FragColor;\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	FragColor = vec4(vColor, 1.0);\n"
-			"}\n";
+		const std::string	vertexShaderPath = "assets/shaders/basic.vert";
+		const std::string	fragmentShaderPath = "assets/shaders/basic.frag";
 
 		const std::vector<Vertex>	vertices = {
 			{{ 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.5f, 1.0f }},
@@ -140,7 +117,7 @@ namespace Scope
 
 		const std::vector<unsigned int>	indices;
 
-		m_shader = new Shader(vertexShaderSource, fragmentShaderSource);
+		m_shader = new Shader(vertexShaderPath, fragmentShaderPath);
 		m_mesh = new Mesh(vertices, indices);
 	}
 

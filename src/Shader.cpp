@@ -5,12 +5,17 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <sstream>
 
 namespace Scope
 {
-	Shader::Shader(const std::string &vertexSource, const std::string &fragmentSource)
+	Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath)
 		: m_programId(0)
 	{
+		std::string vertexSource = loadFileContent(vertexPath);
+		std::string fragmentSource = loadFileContent(fragmentPath);
+
 		unsigned int vertexShaderId = 0;
 		unsigned int fragmentShaderId = 0;
 
@@ -113,5 +118,17 @@ namespace Scope
 		}
 
 		m_programId = programId;
+	}
+
+	std::string	Shader::loadFileContent(const std::string& path) const
+	{
+		std::ifstream file(path.c_str());
+		if (!file.is_open())
+			throw std::runtime_error("Failed to open shader file: " + path);
+
+		std::ostringstream buffer;
+		buffer << file.rdbuf();
+
+		return buffer.str();
 	}
 }
