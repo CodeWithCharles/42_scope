@@ -28,39 +28,46 @@ namespace
 				current.clear();
 			}
 			else
-				current += value[i];
+				current	+= value[i];
 		}
 		parts.push_back(current);
 		return parts;
 	}
 
-	int	parseObjIndex(const std::string& token)
+	int	parseObjIndex(const std::string& token, std::size_t currentCount)
 	{
 		if (token.empty())
 			throw std::runtime_error("OBJ index token is empty");
 
 		int index = std::stoi(token);
-		if (index <= 0)
+		if (index == 0)
 			throw std::runtime_error("OBJ indices must start at 1");
 
-		return index - 1;
+		if (index > 0)
+			return index - 1;
+
+		int resolvedIndex = static_cast<int>(currentCount) + index;
+		if (resolvedIndex < 0)
+			throw std::runtime_error("OBJ negative index is out of bounds");
+
+		return resolvedIndex;
 	}
 
-	FaceVertex	parseFaceVertexToken(const std::string& token)
+	FaceVertex	parseFaceVertexToken(const std::string& token, std::size_t positionsCount, std::size_t texCoordsCount, std::size_t normalsCount)
 	{
 		FaceVertex result = {-1, -1, -1};
 		std::vector<std::string> parts = split(token, '/');
 
 		if (parts.empty() || parts[0].empty())
-			throw std::runtime_error("OBJ face token is missing a position index");
+			throw std::runtime_error("OBJ face token is missing a position");
 
-		result.positionIndex = parseObjIndex(parts[0]);
+		result.positionIndex = parseObjIndex(parts[0], positionsCount);
 
 		if (parts.size() > 1 && !parts[1].empty())
-			result.textureIndex = parseObjIndex(parts[1]);
+			result.textureIndex = parseObjIndex(parts[1], texCoordsCount);
 
 		if (parts.size() > 2 && !parts[2].empty())
-			result.normalIndex = parseObjIndex(parts[2]);
+			result.normalIndex = parseObjIndex(parts[2], normalsCount);
 
 		return result;
 	}
@@ -74,7 +81,9 @@ namespace Scop
 		if (!file.is_open())
 			throw std::runtime_error("Failed to open OBJ file: " + path);
 
-		std::vector<Math::Vec3> positions;
+		std::vector<Math::Vec3>	positions;
+		std::vector<Math::Vec2>	texCoords;
+		std::vector<Math::Vec3>	normals;
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 
@@ -100,29 +109,69 @@ namespace Scop
 			std::string prefix;
 			lineStream >> prefix;
 
-			if (prefix == "v")
+			if (prefix == "#")
+			{
+				continue;
+			}
+			else if (prefix == "v")
 			{
 				Math::Vec3 position;
 				lineStream >> position.x >> position.y >> position.z;
 				positions.push_back(position);
 			}
+			else if (prefix == "vt")
+			{
+				Math::Vec2	texCoord;
+				lineStream >> texCoord.x >> texCoord.y;
+				texCoords.push_back(texCoord);
+			}
+			else if (prefix == "vn")
+			{
+				Math::Vec3	normal;
+				lineStream >> normal.x >> normal.y >> normal.z;
+				normals.push_back(normal);
+			}
 			else if (prefix == "f")
 			{
-				unsigned int a;
-				unsigned int b;
-				unsigned int c;
+				std::string	tokenA;
+				std::string	tokenB;
+				std::string	tokenC;
+				std::string	extraToken;
+				lineStream >> tokenA >> tokenB >> tokenC >> extraToken;
 
-				lineStream >> a >> b >> c;
+				if (tokenA.empty() || tokenB.empty() || tokenC.empty() || !extraToken.empty())
+					throw std::runtime_error("OBJ faces must contain exactly 3 vertices");
 
-				if (a == 0 || b == 0 || c == 0)
-					throw std::runtime_error("OBJ face indices must start at 1");
+				FaceVertex a = parseFaceVertexToken(tokenA,
+					positions.size(),
+					texCoords.size(),
+					normals.size());
+				FaceVertex b = parseFaceVertexToken(tokenB,
+					positions.size(),
+					texCoords.size(),
+					normals.size());
+				FaceVertex c = parseFaceVertexToken(tokenC,
+					positions.size(),
+					texCoords.size(),
+					normals.size());
 
-				unsigned int indexA = a - 1;
-				unsigned int indexB = b - 1;
-				unsigned int indexC = c - 1;
+				if (a.positionIndex < 0 || b.positionIndex < 0 || c.positionIndex < 0)
+					throw std::runtime_error("OBJ face position index is invalid");
 
-				if (indexA >= positions.size() || indexB >= positions.size() || indexC >= positions.size())
+				if (static_cast<std::size_t>(a.positionIndex) >= positions.size()
+					|| static_cast<std::size_t>(b.positionIndex) >= positions.size()
+					|| static_cast<std::size_t>(c.positionIndex) >= positions.size())
 					throw std::runtime_error("OBJ face index out of bounds");
+
+				if ((a.textureIndex >= 0 && static_cast<std::size_t>(a.textureIndex) >= texCoords.size())
+					|| (b.textureIndex >= 0 && static_cast<std::size_t>(b.textureIndex) >= texCoords.size())
+					|| (c.textureIndex >= 0 && static_cast<std::size_t>(c.textureIndex) >= texCoords.size()))
+					throw std::runtime_error("OBJ texture coordinate index out of bounds");
+
+				if ((a.normalIndex >= 0 && static_cast<std::size_t>(a.normalIndex) >= normals.size())
+					|| (b.normalIndex >= 0 && static_cast<std::size_t>(b.normalIndex) >= normals.size())
+					|| (c.normalIndex >= 0 && static_cast<std::size_t>(c.normalIndex) >= normals.size()))
+					throw std::runtime_error("OBJ normal index out of bounds");
 
 				const std::size_t paletteSize = sizeof(colorPalette) / sizeof(colorPalette[0]);
 				Math::Vec3 faceColor = colorPalette[faceIndex % paletteSize];
@@ -130,19 +179,28 @@ namespace Scop
 				unsigned int indexOffset = static_cast<unsigned int>(vertices.size());
 
 				Vertex v0;
-				v0.position = positions[indexA];
+				v0.position = positions[a.positionIndex];
 				v0.color = faceColor;
-				v0.uv = {0.0f, 0.0f};
+				if (a.textureIndex >= 0)
+					v0.uv = texCoords[a.textureIndex];
+				else
+					v0.uv = {0.0f, 0.0f};
 
 				Vertex v1;
-				v1.position = positions[indexB];
+				v1.position = positions[b.positionIndex];
 				v1.color = faceColor;
-				v1.uv = {0.0f, 0.0f};
+				if (b.textureIndex >= 0)
+					v1.uv = texCoords[b.textureIndex];
+				else
+					v1.uv = {0.0f, 0.0f};
 
 				Vertex v2;
-				v2.position = positions[indexC];
+				v2.position = positions[c.positionIndex];
 				v2.color = faceColor;
-				v2.uv = {0.0f, 0.0f};
+				if (c.textureIndex >= 0)
+					v2.uv = texCoords[c.textureIndex];
+				else
+					v2.uv = {0.0f, 0.0f};
 
 				vertices.push_back(v0);
 				vertices.push_back(v1);
