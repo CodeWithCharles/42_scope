@@ -88,7 +88,7 @@ namespace Scop
 			(m_minBounds.x + m_maxBounds.x) * 0.5f,
 			(m_minBounds.y + m_maxBounds.y) * 0.5f,
 			(m_minBounds.z + m_maxBounds.z) * 0.5f,
-		}
+		};
 	}
 
 	const std::vector<ModelPart>&	Model::getParts() const

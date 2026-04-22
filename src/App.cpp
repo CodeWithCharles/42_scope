@@ -18,7 +18,7 @@ namespace Scop
 			Config::WINDOW_TITLE),
 		  m_isRunning(false),
 		  m_shader(nullptr),
-		  m_mesh(nullptr),
+		  m_model(nullptr),
 		  m_rotationAngle(0.0f),
 		  m_position({0.0f, 0.0f, 0.0f})
 	{
@@ -109,8 +109,8 @@ namespace Scop
 			Config::CLEAR_ALPHA);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		Math::Vec3 center = m_mesh->getCenter();
-		Math::Vec3 size = m_mesh->getSize();
+		Math::Vec3 center = m_model->getCenter();
+		Math::Vec3 size = m_model->getSize();
 
 		float maxExtent = size.x;
 
@@ -152,7 +152,7 @@ namespace Scop
 
 		m_shader->use();
 		m_shader->setMat4("uMVP", mvp);
-		m_mesh->draw();
+		m_model->draw();
 	}
 
 	void	App::initScene()
@@ -161,15 +161,15 @@ namespace Scop
 		const std::string	fragmentShaderPath = "assets/shaders/basic.frag";
 
 		m_shader = new Shader(vertexShaderPath, fragmentShaderPath);
-		m_mesh = ObjLoader::load(Config::MODEL_PATH);
+		m_model = ObjLoader::load(Config::MODEL_PATH);
 	}
 
 	void	App::cleanupScene()
 	{
-		if (m_mesh != nullptr)
+		if (m_model != nullptr)
 		{
-			delete m_mesh;
-			m_mesh = nullptr;
+			delete m_model;
+			m_model = nullptr;
 		}
 
 		if (m_shader != nullptr)
