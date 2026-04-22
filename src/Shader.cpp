@@ -60,6 +60,23 @@ namespace Scop
 		glUniformMatrix4fv(location, 1, GL_FALSE, matrix.raw());
 	}
 
+	void	Shader::setInt(const std::string& uniformName, int value) const
+	{
+		int location = glGetUniformLocation(m_programId, uniformName.c_str());
+		if (location == -1)
+			return;
+		glUniform1i(location, value);
+	}
+
+	void	Shader::setFloat(const std::string& uniformName, float value) const
+	{
+		int location = glGetUniformLocation(m_programId, uniformName.c_str());
+		if (location == -1)
+			return;
+
+		glUniform1f(location, value);
+	}
+
 	unsigned int	Shader::getProgramId() const
 	{
 		return m_programId;

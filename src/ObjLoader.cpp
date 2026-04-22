@@ -105,6 +105,18 @@ namespace
 
 		return result;
 	}
+
+	const Scop::Material*	findMaterialByName(
+		const std::vector<Scop::Material>& materials,
+		const std::string& materialName)
+	{
+		for (std::size_t i = 0; i < materials.size(); ++i)
+		{
+			if (materials[i].name == materialName)
+				return &materials[i];
+		}
+		return nullptr;
+	}
 }
 
 namespace Scop
@@ -245,6 +257,13 @@ namespace Scop
 
 				const std::size_t paletteSize = sizeof(colorPalette) / sizeof(colorPalette[0]);
 				Math::Vec3 faceColor = colorPalette[faceIndex % paletteSize];
+
+				const Scop::Material* material = findMaterialByName(
+					model->getMaterials(),
+					currentSection.materialName);
+
+				if (material != nullptr)
+					faceColor = material->diffuse;
 
 				for (std::size_t i = 1; i + 1 < faceVertices.size(); ++i)
 				{

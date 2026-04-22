@@ -22,6 +22,8 @@ namespace Scop
 
 			void			use() const;
 			void			setMat4(const std::string& uniformName, const Math::Mat4& matrix) const;
+			void			setInt(const std::string& uniformName, int value) const;
+			void			setFloat(const std::string& uniformName, float value) const;
 			unsigned int	getProgramId() const;
 
 		private:

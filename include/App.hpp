@@ -3,6 +3,7 @@
 #include "Window.hpp"
 #include "Shader.hpp"
 #include "Model.hpp"
+#include "Texture.hpp"
 
 #include "math/Mat4.hpp"
 #include "math/Vec3.hpp"
@@ -16,6 +17,7 @@ namespace Scop
 			bool		m_isRunning;
 			Shader		*m_shader;
 			Model		*m_model;
+			Texture		*m_texture;
 			float		m_rotationAngle;
 			float		m_deltaTime;
 			float		m_lastFrameTime;

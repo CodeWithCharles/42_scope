@@ -31,5 +31,6 @@ namespace Scop::Config
 
 	inline constexpr bool	START_WITH_VSYNC					= true;
 
-	inline constexpr char	MODEL_PATH[]						= "assets/models/teapot2.obj";
+	inline constexpr char	MODEL_PATH[]						= "assets/models/test_uv.obj";
+	inline constexpr char	TEXTURE_PATH[]						= "assets/textures/test.ppm";
 }

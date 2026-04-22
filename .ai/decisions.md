@@ -13,6 +13,8 @@
 - Les objets sont recentres a l'origine pour le rendu par defaut ; on n'applique pas le retour a la position brute du fichier dans le viewer.
 - L'orientation d'import doit rester un correctif par modele, pas une identite globale de l'application.
 - L'apparition de `mtllib`, `usemtl` et `o` a justifie l'introduction de `Material`, `Model`, `MtlLoader` et la migration de `ObjLoader` vers un retour `Model*`.
+- La premiere abstraction de texture du projet passe par une classe `Texture` dediee et un loader PPM maison (`P3`/`P6`) pour rester dans les contraintes sans dependance externe.
+- Le shader principal melange couleur vertex et texture via un uniforme `uTextureBlend` plutot qu'un simple bool, afin de couvrir directement la transition douce demandee par le sujet.
 
 ## Regle d'entretien
 

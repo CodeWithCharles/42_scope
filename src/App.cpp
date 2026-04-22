@@ -19,6 +19,7 @@ namespace Scop
 		  m_isRunning(false),
 		  m_shader(nullptr),
 		  m_model(nullptr),
+		  m_texture(nullptr),
 		  m_rotationAngle(0.0f),
 		  m_position({0.0f, 0.0f, 0.0f})
 	{
@@ -152,6 +153,10 @@ namespace Scop
 
 		m_shader->use();
 		m_shader->setMat4("uMVP", mvp);
+		m_shader->setInt("uTexture", 0);
+		m_shader->setFloat("uTextureBlend", 1.0f);
+		glActiveTexture(GL_TEXTURE0);
+		m_texture->bind();
 		m_model->draw();
 	}
 
@@ -162,10 +167,16 @@ namespace Scop
 
 		m_shader = new Shader(vertexShaderPath, fragmentShaderPath);
 		m_model = ObjLoader::load(Config::MODEL_PATH);
+		m_texture = new Texture(Config::TEXTURE_PATH);
 	}
 
 	void	App::cleanupScene()
 	{
+		if (m_texture != nullptr)
+		{
+			delete m_texture;
+			m_texture = nullptr;
+		}
 		if (m_model != nullptr)
 		{
 			delete m_model;
