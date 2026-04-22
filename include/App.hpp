@@ -2,7 +2,7 @@
 
 #include "Window.hpp"
 #include "Shader.hpp"
-#include "Mesh.hpp"
+#include "Model.hpp"
 
 #include "math/Mat4.hpp"
 #include "math/Vec3.hpp"
@@ -15,7 +15,7 @@ namespace Scop
 			Window		m_window;
 			bool		m_isRunning;
 			Shader		*m_shader;
-			Mesh		*m_mesh;
+			Model		*m_model;
 			float		m_rotationAngle;
 			float		m_deltaTime;
 			float		m_lastFrameTime;

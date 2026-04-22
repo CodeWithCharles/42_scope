@@ -1,4 +1,5 @@
 #include "ObjLoader.hpp"
+#include "MtlLoader.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -14,6 +15,39 @@ namespace
 		int	textureIndex;
 		int	normalIndex;
 	};
+
+	struct ObjSection
+	{
+		std::string					name;
+		std::string					materialName;
+		std::vector<Scop::Vertex>	vertices;
+		std::vector<unsigned int>	indices;
+	};
+
+	std::string	getDirectoryPath(const std::string& path)
+	{
+		std::size_t	separatorPos = path.find_last_of("/\\");
+		if (separatorPos == std::string::npos)
+			return "";
+
+		return path.substr(0, separatorPos + 1);
+	}
+
+	void	appendSectionToModel(Scop::Model& model, ObjSection& section)
+	{
+		if (section.vertices.empty())
+			return;
+
+		Scop::ModelPart	part;
+		part.name = section.name;
+		part.materialName = section.materialName;
+		part.mesh = new Scop::Mesh(section.vertices, section.indices);
+
+		model.addPart(part);
+
+		section.vertices.clear();
+		section.indices.clear();
+	}
 
 	std::vector<std::string>	split(const std::string& value, char delimiter)
 	{
@@ -75,17 +109,21 @@ namespace
 
 namespace Scop
 {
-	Mesh*	ObjLoader::load(const std::string& path)
+	Model*	ObjLoader::load(const std::string& path)
 	{
 		std::ifstream file(path.c_str());
 		if (!file.is_open())
 			throw std::runtime_error("Failed to open OBJ file: " + path);
 
+		Model* model = new Model();
+
 		std::vector<Math::Vec3>	positions;
 		std::vector<Math::Vec2>	texCoords;
 		std::vector<Math::Vec3>	normals;
-		std::vector<Vertex> vertices;
-		std::vector<unsigned int> indices;
+
+		ObjSection currentSection;
+		currentSection.name = "Default";
+		std::string objDirectory = getDirectoryPath(path);
 
 		const Math::Vec3 colorPalette[] = {
 			{1.0f, 0.0f, 0.0f},
@@ -130,6 +168,43 @@ namespace Scop
 				Math::Vec3	normal;
 				lineStream >> normal.x >> normal.y >> normal.z;
 				normals.push_back(normal);
+			}
+			else if (prefix == "o")
+			{
+				std::string	previousMaterialName = currentSection.materialName;
+
+				appendSectionToModel(*model, currentSection);
+
+				currentSection = ObjSection();
+				currentSection.materialName = previousMaterialName;
+				lineStream >> currentSection.name;
+
+				if (currentSection.name.empty())
+					currentSection.name = "Unnamed";
+			}
+			else if (prefix == "mtllib")
+			{
+				std::string	mtlFileName;
+				lineStream >> mtlFileName;
+
+				if (!mtlFileName.empty())
+				{
+					std::vector<Material> materials = MtlLoader::load(objDirectory + mtlFileName);
+					for (std::size_t i = 0; i < materials.size(); ++i)
+						model->addMaterial(materials[i]);
+				}
+			}
+			else if (prefix =="usemtl")
+			{
+				std::string materialName;
+				lineStream >> materialName;
+
+				appendSectionToModel(*model, currentSection);
+
+				ObjSection newSection;
+				newSection.name = currentSection.name;
+				newSection.materialName = materialName;
+				currentSection = newSection;
 			}
 			else if (prefix == "f")
 			{
@@ -177,7 +252,7 @@ namespace Scop
 					const FaceVertex& b = faceVertices[i];
 					const FaceVertex& c = faceVertices[i + 1];
 
-					unsigned int indexOffset = static_cast<unsigned int>(vertices.size());
+					unsigned int indexOffset = static_cast<unsigned int>(currentSection.vertices.size());
 
 
 					Vertex v0;
@@ -204,19 +279,19 @@ namespace Scop
 					else
 						v2.uv = {0.0f, 0.0f};
 
-					vertices.push_back(v0);
-					vertices.push_back(v1);
-					vertices.push_back(v2);
+					currentSection.vertices.push_back(v0);
+					currentSection.vertices.push_back(v1);
+					currentSection.vertices.push_back(v2);
 
-					indices.push_back(indexOffset + 0);
-					indices.push_back(indexOffset + 1);
-					indices.push_back(indexOffset + 2);
+					currentSection.indices.push_back(indexOffset + 0);
+					currentSection.indices.push_back(indexOffset + 1);
+					currentSection.indices.push_back(indexOffset + 2);
 				}
 
 				++faceIndex;
 			}
 		}
-
-		return new Mesh(vertices, indices);
+		appendSectionToModel(*model, currentSection);
+		return model;
 	}
 }

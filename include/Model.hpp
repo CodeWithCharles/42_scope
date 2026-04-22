@@ -21,6 +21,10 @@ namespace Scop
 			std::vector<ModelPart>	m_parts;
 			std::vector<Material>	m_materials;
 
+			Math::Vec3				m_minBounds;
+			Math::Vec3				m_maxBounds;
+			Math::Vec3				m_center;
+
 		public:
 			Model();
 			~Model();
@@ -38,5 +42,13 @@ namespace Scop
 
 			const	std::vector<ModelPart>&	getParts() const;
 			const	std::vector<Material>&	getMaterials() const;
+
+			const Math::Vec3&	getMinBounds() const;
+			const Math::Vec3&	getMaxBounds() const;
+			const Math::Vec3&	getCenter() const;
+			Math::Vec3			getSize() const;
+
+		private:
+			void	computeBounds();
 	};
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Mesh.hpp"
+#include "Model.hpp"
 
 #include <string>
 
@@ -9,6 +9,6 @@ namespace Scop
 	class ObjLoader
 	{
 		public:
-			static Mesh*	load(const std::string& path);
+			static Model*	load(const std::string& path);
 	};
 }
