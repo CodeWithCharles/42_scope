@@ -133,10 +133,10 @@ namespace Scop
 		Math::Mat4 importRotation = Math::Mat4::rotationX(Config::MODEL_IMPORT_ROTATION_X_RADIANS);
 		Math::Mat4 animationRotation = Math::Mat4::rotationY(m_rotationAngle);
 		Math::Mat4 rotation = animationRotation * importRotation;
-		Math::Mat4 backToCenter = Math::Mat4::translation(center);
+		// Math::Mat4 backToCenter = Math::Mat4::translation(center);
 		Math::Mat4 translation = Math::Mat4::translation(m_position);
 
-		Math::Mat4 model = translation * backToCenter * rotation * scale * toOrigin;
+		Math::Mat4 model = translation * rotation * scale * toOrigin;
 		Math::Mat4 view = Math::Mat4::translation({0.0f, 0.0f, -Config::CAMERA_DISTANCE});
 
 		float aspectRatio = static_cast<float>(m_window.getWidth())

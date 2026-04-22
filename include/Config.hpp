@@ -17,7 +17,8 @@ namespace Scop::Config
 	inline constexpr float	CLEAR_BLUE							= 0.12f;
 	inline constexpr float	CLEAR_ALPHA							= 1.0f;
 
-	inline constexpr float	MODEL_IMPORT_ROTATION_X_RADIANS =	-1.5708f;
+	// inline constexpr float	MODEL_IMPORT_ROTATION_X_RADIANS =	-1.5708f;
+	inline constexpr float	MODEL_IMPORT_ROTATION_X_RADIANS =	0.0f;
 
 	inline constexpr float	CAMERA_DISTANCE						= 2.0f;
 
@@ -30,5 +31,5 @@ namespace Scop::Config
 
 	inline constexpr bool	START_WITH_VSYNC					= true;
 
-	inline constexpr char	MODEL_PATH[]						= "assets/models/FinalBaseMesh.obj";
+	inline constexpr char	MODEL_PATH[]						= "assets/models/human.obj";
 }
