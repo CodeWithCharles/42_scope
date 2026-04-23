@@ -16,6 +16,13 @@
 - La premiere abstraction de texture du projet passe par une classe `Texture` dediee et un loader PPM maison (`P3`/`P6`) pour rester dans les contraintes sans dependance externe.
 - Le shader principal melange couleur vertex et texture via un uniforme `uTextureBlend` plutot qu'un simple bool, afin de couvrir directement la transition douce demandee par le sujet.
 
+## 2026-04-23
+
+- La logique de recherche de texture diffuse reste dans le domaine modele/import, pas dans `App` : `Model` expose les helpers de consultation, `App` se contente d'orchestrer.
+- Les chemins `map_Kd` sont resolves au chargement relativement au dossier du fichier `.mtl`, pas au cwd ni directement au dossier du `.obj`.
+- Tant que le projet ne supporte officiellement que les textures `PPM`, `App` n'auto-charge la texture diffuse d'un modele que si le chemin resolu pointe vers un `.ppm`; sinon il retombe sur `Config::TEXTURE_PATH`.
+- La convention d'import UV retenue est un flip global de la coordonnee `V`, applique uniquement aux vertices qui ont effectivement un `vt`, afin de rester compatible avec les modeles sans UV.
+
 ## Regle d'entretien
 
 Ajouter ici uniquement les decisions qui :

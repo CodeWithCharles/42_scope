@@ -1,6 +1,6 @@
 #include <glad/glad.h>
 
-#include "Texture.hpp"
+#include "render/Texture.hpp"
 
 #include <fstream>
 #include <stdexcept>

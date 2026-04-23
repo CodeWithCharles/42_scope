@@ -19,69 +19,76 @@
 - nouvelle abstraction `Texture`
 - chargement de textures PPM `P6` et `P3`
 - upload OpenGL + bind texture valides
-- `App` charge une texture de test et l'affiche correctement sur `test_uv.obj`
+- toggle texture sur `T` avec anti-rebond
+- transition douce couleur/texture pilotee par `deltaTime`
+- `render()` envoie maintenant la vraie valeur de `uTextureBlend`
+- `Material.diffuseTexturePath` remonte jusqu'au `Model`
+- `Model` expose `findMaterialByName()` et `findFirstDiffuseTexturePath()`
+- `ObjLoader` resout `map_Kd` relativement au dossier du `.mtl`
+- `ObjLoader` applique maintenant un flip global de la coordonnee UV `V` a l'import, uniquement quand `vt` est present
+- `App` tente d'utiliser la premiere texture diffuse du modele si c'est un `.ppm`, sinon fallback sur `Config::TEXTURE_PATH`
 
 ## Etat reel du chantier
 
-Le chemin critique a bien avance jusqu'a une vraie `V1 texture`.
+Le chemin critique mandatory texture a bien avance.
 
-Le rendu texture fonctionne sur un asset de test maitrise :
+Le rendu texture fonctionne sur un asset de test maitrise, et le toggle mandatory est maintenant en place :
 
-- `Config::MODEL_PATH` pointe actuellement sur `assets/models/test_uv.obj`
+- `Config::MODEL_PATH` pointe actuellement sur `assets/models/Watchtower/wooden_watch_tower2.obj`
 - `Config::TEXTURE_PATH` pointe actuellement sur `assets/textures/test.ppm`
-- `render()` envoie pour l'instant `uTextureBlend = 1.0f`
+- `T` alterne bien entre couleurs vertex et texture avec transition douce
+- le fallback sur `test.ppm` reste stable meme quand le modele reference une texture non supportee
 
-Donc la texture est visible, mais le comportement mandatory du sujet n'est pas encore termine :
+La Watchtower a servi de validation utile :
 
-- pas encore de touche dediee pour alterner couleurs / texture
-- pas encore de transition douce pilotee dans `App`
-- pas encore de validation finale sur un vrai asset texture pour la defense
+- geometriquement le modele est bon
+- les UV existent bien
+- le passage texture montre bien que le pipeline est branche
+- le flip `V` corrige visiblement l'orientation de texture sur cet asset
+- la vraie texture diffuse du modele peut maintenant etre exploitee si on fournit un `PPM` coherent
 
 ## Ce qu'il reste a faire
 
-1. Ajouter dans `App` un petit etat pour la texture :
-   - blend courant
-   - cible couleur / texture
-   - anti-rebond de touche
-2. Ajouter une touche dediee dans `processInput()` pour toggler entre mode couleur et mode texture.
-3. Faire evoluer `m_textureBlend` dans `update()` avec `deltaTime` au lieu d'envoyer `1.0f` en dur.
-4. Envoyer la valeur courante de blend au shader dans `render()`.
-5. Verifier visuellement :
-   - retour aux couleurs vertex
-   - passage progressif vers la texture
-   - retour progressif vers les couleurs
-6. Rebrancher ensuite un modele / une texture plus proches du rendu de defense.
+1. Decider la strategie pour les textures reelles de materiaux :
+   - soit convertir / fournir des textures `PPM`
+   - soit ajouter un support image plus large
+2. Valider un vrai couple modele + texture diffuse exploitable pour la defense.
+3. Si besoin, enrichir la logique texture pour gerer plus d'un materiau texture dans un meme modele.
+4. Nettoyer ensuite les petits ecarts restants de style / robustesse, mais sans rouvrir inutilement le pipeline texture deja valide.
 
 ## Blocages / points de vigilance
 
 - Beaucoup de `.obj` importes pour test (`shuttle`, `skyscraper`, `cessna`) n'ont pas de `vt`, donc ils ne sont pas de bons candidats pour valider le pipeline texture.
 - Les tokens OBJ `g` et `s` apparaissent dans certains assets reels, mais ce n'est pas bloquant pour finir le chemin critique mandatory.
-- Le rendu texture a ete valide sur un asset de test synthetique ; il manque encore une validation finale sur un cas plus proche de la defense.
+- Le loader texture actuel reste limite au `PPM` (`P3` / `P6`).
+- La Watchtower reference `map_Kd textures\\t_C_3.png`, mais le repo contient surtout `textures/Wood_Tower_Col.jpg` : il y a probablement un decalage entre le `.mtl` et les assets reels.
+- Le fallback actuel charge une seule texture pour tout le modele ; c'est volontairement simple pour finir le mandatory, mais pas encore un pipeline multi-texture complet.
+- Le flip `V` ne doit jamais etre applique hors du chemin ou `textureIndex >= 0`, sinon les modeles sans `vt` comme `cessna.obj` plantent.
 
 ## Prochain pas recommande
 
-Faire le toggle texture dans `App` :
+Choisir et valider un vrai chemin de texture de defense :
 
-1. ajouter `m_textureBlend`
-2. ajouter un bool cible couleur / texture
-3. ajouter un bool anti-rebond pour la touche
-4. utiliser cette cible dans `update()` pour animer progressivement le blend
-5. remplacer le `1.0f` en dur dans `render()` par la valeur courante
+1. trouver un modele avec `vt` et une texture diffuse exploitable en `PPM`
+2. ou convertir une texture de test vers `PPM` si on veut rester strictement dans la voie actuelle
+3. verifier ensuite visuellement le rendu sans fallback artificiel
+4. seulement apres, decider s'il faut vraiment ajouter le support `jpg/png`
 
 ## Fichiers a regarder d'abord
 
 - `include/App.hpp`
 - `src/App.cpp`
-- `include/Shader.hpp`
-- `src/Shader.cpp`
+- `include/Model.hpp`
+- `src/Model.cpp`
+- `src/ObjLoader.cpp`
 - `include/Texture.hpp`
 - `src/Texture.cpp`
-- `assets/shaders/basic.vert`
-- `assets/shaders/basic.frag`
 - `include/Config.hpp`
 
 ## Notes de reprise
 
-- La `V1 texture` fonctionne deja : ne pas rouvrir le chantier parser image tant que le toggle + blend mandatory ne sont pas termines.
+- Le toggle + blend mandatory sont termines et valides visuellement.
+- La convention UV actuellement validee est : flip global de `V` a l'import, uniquement pour les sommets qui ont des coordonnees de texture.
 - Si le rendu parait flou sur `test.ppm`, c'est normal avec une texture minuscule et les filtres lineaires.
 - Pour debugger la texture plus lisiblement, on peut temporairement passer en `GL_NEAREST`, mais ce n'est pas le chemin critique.
+- Tant que le projet reste en `PPM only`, `App` garde un fallback simple sur `Config::TEXTURE_PATH` pour ne pas casser les assets qui referencent du `jpg/png`.

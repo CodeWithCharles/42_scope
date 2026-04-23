@@ -1,5 +1,6 @@
-#include "ObjLoader.hpp"
-#include "MtlLoader.hpp"
+#include "io/ObjLoader.hpp"
+#include "io/MtlLoader.hpp"
+#include "io/PathUtils.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -9,13 +10,6 @@
 
 namespace
 {
-	struct FaceVertex
-	{
-		int	positionIndex;
-		int	textureIndex;
-		int	normalIndex;
-	};
-
 	struct ObjSection
 	{
 		std::string					name;
@@ -23,15 +17,6 @@ namespace
 		std::vector<Scop::Vertex>	vertices;
 		std::vector<unsigned int>	indices;
 	};
-
-	std::string	getDirectoryPath(const std::string& path)
-	{
-		std::size_t	separatorPos = path.find_last_of("/\\");
-		if (separatorPos == std::string::npos)
-			return "";
-
-		return path.substr(0, separatorPos + 1);
-	}
 
 	void	appendSectionToModel(Scop::Model& model, ObjSection& section)
 	{
@@ -47,75 +32,6 @@ namespace
 
 		section.vertices.clear();
 		section.indices.clear();
-	}
-
-	std::vector<std::string>	split(const std::string& value, char delimiter)
-	{
-		std::vector<std::string>	parts;
-		std::string					current;
-
-		for (std::size_t i = 0; i < value.size(); ++i)
-		{
-			if (value[i] == delimiter)
-			{
-				parts.push_back(current);
-				current.clear();
-			}
-			else
-				current	+= value[i];
-		}
-		parts.push_back(current);
-		return parts;
-	}
-
-	int	parseObjIndex(const std::string& token, std::size_t currentCount)
-	{
-		if (token.empty())
-			throw std::runtime_error("OBJ index token is empty");
-
-		int index = std::stoi(token);
-		if (index == 0)
-			throw std::runtime_error("OBJ indices must start at 1");
-
-		if (index > 0)
-			return index - 1;
-
-		int resolvedIndex = static_cast<int>(currentCount) + index;
-		if (resolvedIndex < 0)
-			throw std::runtime_error("OBJ negative index is out of bounds");
-
-		return resolvedIndex;
-	}
-
-	FaceVertex	parseFaceVertexToken(const std::string& token, std::size_t positionsCount, std::size_t texCoordsCount, std::size_t normalsCount)
-	{
-		FaceVertex result = {-1, -1, -1};
-		std::vector<std::string> parts = split(token, '/');
-
-		if (parts.empty() || parts[0].empty())
-			throw std::runtime_error("OBJ face token is missing a position");
-
-		result.positionIndex = parseObjIndex(parts[0], positionsCount);
-
-		if (parts.size() > 1 && !parts[1].empty())
-			result.textureIndex = parseObjIndex(parts[1], texCoordsCount);
-
-		if (parts.size() > 2 && !parts[2].empty())
-			result.normalIndex = parseObjIndex(parts[2], normalsCount);
-
-		return result;
-	}
-
-	const Scop::Material*	findMaterialByName(
-		const std::vector<Scop::Material>& materials,
-		const std::string& materialName)
-	{
-		for (std::size_t i = 0; i < materials.size(); ++i)
-		{
-			if (materials[i].name == materialName)
-				return &materials[i];
-		}
-		return nullptr;
 	}
 }
 
@@ -201,9 +117,20 @@ namespace Scop
 
 				if (!mtlFileName.empty())
 				{
-					std::vector<Material> materials = MtlLoader::load(objDirectory + mtlFileName);
+					std::string mtlPath = resolveResourcePath(objDirectory, mtlFileName);
+					std::string mtlDirectory = getDirectoryPath(mtlPath);
+					std::vector<Material> materials = MtlLoader::load(mtlPath);
+
 					for (std::size_t i = 0; i < materials.size(); ++i)
+					{
+						if (!materials[i].diffuseTexturePath.empty())
+						{
+							materials[i].diffuseTexturePath = resolveResourcePath(
+								mtlDirectory,
+								materials[i].diffuseTexturePath);
+						}
 						model->addMaterial(materials[i]);
+					}
 				}
 			}
 			else if (prefix =="usemtl")
@@ -258,8 +185,7 @@ namespace Scop
 				const std::size_t paletteSize = sizeof(colorPalette) / sizeof(colorPalette[0]);
 				Math::Vec3 faceColor = colorPalette[faceIndex % paletteSize];
 
-				const Scop::Material* material = findMaterialByName(
-					model->getMaterials(),
+				const Scop::Material* material = model->findMaterialByName(
 					currentSection.materialName);
 
 				if (material != nullptr)
@@ -274,29 +200,9 @@ namespace Scop
 					unsigned int indexOffset = static_cast<unsigned int>(currentSection.vertices.size());
 
 
-					Vertex v0;
-					v0.position = positions[a.positionIndex];
-					v0.color = faceColor;
-					if (a.textureIndex >= 0)
-						v0.uv = texCoords[a.textureIndex];
-					else
-						v0.uv = {0.0f, 0.0f};
-
-					Vertex v1;
-					v1.position = positions[b.positionIndex];
-					v1.color = faceColor;
-					if (b.textureIndex >= 0)
-						v1.uv = texCoords[b.textureIndex];
-					else
-						v1.uv = {0.0f, 0.0f};
-
-					Vertex v2;
-					v2.position = positions[c.positionIndex];
-					v2.color = faceColor;
-					if (c.textureIndex >= 0)
-						v2.uv = texCoords[c.textureIndex];
-					else
-						v2.uv = {0.0f, 0.0f};
+					Vertex v0 = buildVertex(a, positions, texCoords, faceColor);
+					Vertex v1 = buildVertex(b, positions, texCoords, faceColor);
+					Vertex v2 = buildVertex(c, positions, texCoords, faceColor);
 
 					currentSection.vertices.push_back(v0);
 					currentSection.vertices.push_back(v1);
@@ -312,5 +218,93 @@ namespace Scop
 		}
 		appendSectionToModel(*model, currentSection);
 		return model;
+	}
+
+	std::vector<std::string>	ObjLoader::split(
+		const std::string& value,
+		char delimiter)
+	{
+		std::vector<std::string>	parts;
+		std::string					current;
+
+		for (std::size_t i = 0; i < value.size(); ++i)
+		{
+			if (value[i] == delimiter)
+			{
+				parts.push_back(current);
+				current.clear();
+			}
+			else
+				current	+= value[i];
+		}
+		parts.push_back(current);
+		return parts;
+	}
+
+
+	int	ObjLoader::parseObjIndex(
+		const std::string& token,
+		std::size_t currentCount)
+	{
+		if (token.empty())
+			throw std::runtime_error("OBJ index token is empty");
+
+		int index = std::stoi(token);
+		if (index == 0)
+			throw std::runtime_error("OBJ indices must start at 1");
+
+		if (index > 0)
+			return index - 1;
+
+		int resolvedIndex = static_cast<int>(currentCount) + index;
+		if (resolvedIndex < 0)
+			throw std::runtime_error("OBJ negative index is out of bounds");
+
+		return resolvedIndex;
+	}
+
+	ObjLoader::FaceVertex	ObjLoader::parseFaceVertexToken(
+		const std::string& token,
+		std::size_t positionsCount,
+		std::size_t texCoordsCount,
+		std::size_t normalsCount)
+	{
+		FaceVertex result = {-1, -1, -1};
+		std::vector<std::string> parts = split(token, '/');
+
+		if (parts.empty() || parts[0].empty())
+			throw std::runtime_error("OBJ face token is missing a position");
+
+		result.positionIndex = parseObjIndex(parts[0], positionsCount);
+
+		if (parts.size() > 1 && !parts[1].empty())
+			result.textureIndex = parseObjIndex(parts[1], texCoordsCount);
+
+		if (parts.size() > 2 && !parts[2].empty())
+			result.normalIndex = parseObjIndex(parts[2], normalsCount);
+
+		return result;
+	}
+
+	Vertex	ObjLoader::buildVertex(
+		const FaceVertex& faceVertex,
+		const std::vector<Math::Vec3>& positions,
+		const std::vector<Math::Vec2>& texCoords,
+		const Math::Vec3& faceColor)
+	{
+		Vertex vertex;
+
+		vertex.position = positions[faceVertex.positionIndex];
+		vertex.color = faceColor;
+
+		if (faceVertex.textureIndex >= 0)
+		{
+			vertex.uv = texCoords[faceVertex.textureIndex];
+			vertex.uv.y = 1.0f - vertex.uv.y;
+		}
+		else
+			vertex.uv = {0.0f, 0.0f};
+
+		return vertex;
 	}
 }

@@ -1,4 +1,4 @@
-#include "MtlLoader.hpp"
+#include "io/MtlLoader.hpp"
 
 #include <fstream>
 #include <sstream>

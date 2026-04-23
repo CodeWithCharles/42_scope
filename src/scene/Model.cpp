@@ -1,4 +1,4 @@
-#include "Model.hpp"
+#include "scene/Model.hpp"
 
 namespace Scop
 {
@@ -99,6 +99,28 @@ namespace Scop
 	const std::vector<Material>&	Model::getMaterials() const
 	{
 		return m_materials;
+	}
+
+	const Material*	Model::findMaterialByName(const std::string& name) const
+	{
+		for (std::size_t i = 0; i < m_materials.size(); ++i)
+		{
+			if (m_materials[i].name == name)
+				return &m_materials[i];
+		}
+		return nullptr;
+	}
+
+	std::string	Model::findFirstDiffuseTexturePath() const
+	{
+		for (std::size_t i = 0; i < m_parts.size(); ++i)
+		{
+			const Material* material = findMaterialByName(m_parts[i].materialName);
+
+			if (material != nullptr && !material->diffuseTexturePath.empty())
+				return material->diffuseTexturePath;
+		}
+		return "";
 	}
 
 	const Math::Vec3&	Model::getMinBounds() const

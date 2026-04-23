@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Material.hpp"
+#include "scene/Material.hpp"
 
 #include <string>
 #include <vector>

@@ -1,9 +1,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "App.hpp"
-#include "Config.hpp"
-#include "ObjLoader.hpp"
+#include "app/App.hpp"
+#include "core/Config.hpp"
+#include "io/ObjLoader.hpp"
 
 #include <stdexcept>
 #include <string>
@@ -18,9 +18,15 @@ namespace Scop
 			Config::WINDOW_TITLE),
 		  m_isRunning(false),
 		  m_shader(nullptr),
+		  m_camera(nullptr),
 		  m_model(nullptr),
-		  m_texture(nullptr),
+		  m_fallbackTexture(nullptr),
+		  m_textureBlend(1.0f),
+		  m_textureEnabled(true),
+		  m_textureTogglePressed(false),
 		  m_rotationAngle(0.0f),
+		  m_deltaTime(0.0f),
+		  m_lastFrameTime(0.0f),
 		  m_position({0.0f, 0.0f, 0.0f})
 	{
 	}
@@ -90,6 +96,18 @@ namespace Scop
 			m_position.z -= translationStep;
 		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_E) == GLFW_PRESS)
 			m_position.z += translationStep;
+
+		int	textureToggleState = glfwGetKey(m_window.getHandle(), GLFW_KEY_T);
+
+		if (textureToggleState == GLFW_PRESS && !m_textureTogglePressed)
+		{
+			m_textureEnabled = !m_textureEnabled;
+			m_textureTogglePressed = true;
+		}
+		else if (textureToggleState == GLFW_RELEASE)
+		{
+			m_textureTogglePressed = false;
+		}
 	}
 
 	void	App::update()
@@ -98,7 +116,73 @@ namespace Scop
 			return;
 		if (m_deltaTime > 0.1f)
 			m_deltaTime = 0.1f;
+
 		m_rotationAngle += Config::ROTATION_SPEED_RADIANS_PER_SECOND * m_deltaTime;
+
+		float	targetBlend = m_textureEnabled ? 1.0f : 0.0f;
+		float	blendStep = 2.0f * m_deltaTime;
+
+		if (m_textureBlend < targetBlend)
+		{
+			m_textureBlend += blendStep;
+			if (m_textureBlend > targetBlend)
+				m_textureBlend = targetBlend;
+		}
+		else if (m_textureBlend > targetBlend)
+		{
+			m_textureBlend -= blendStep;
+			if (m_textureBlend < targetBlend)
+				m_textureBlend = targetBlend;
+		}
+	}
+
+	Texture*	App::findLoadedTexture(const std::string& path) const
+	{
+		for (std::size_t i = 0; i < m_loadedTextures.size(); ++i)
+		{
+			if (m_loadedTextures[i].path == path)
+				return m_loadedTextures[i].texture;
+		}
+		return nullptr;
+	}
+
+	Texture*	App::loadTexture(const std::string& path)
+	{
+		Texture*	existingTexture = findLoadedTexture(path);
+
+		if (existingTexture != nullptr)
+			return existingTexture;
+
+		LoadedTexture loadedTexture;
+		loadedTexture.path = path;
+		loadedTexture.texture = new Texture(path);
+
+		m_loadedTextures.push_back(loadedTexture);
+		return loadedTexture.texture;
+	}
+
+	Texture*	App::getTextureForPart(const ModelPart& part)
+	{
+		const Material*	material = m_model->findMaterialByName(part.materialName);
+
+		if (material == nullptr || material->diffuseTexturePath.empty())
+			return m_fallbackTexture;
+
+		const std::string& texturePath = material->diffuseTexturePath;
+
+		if (texturePath.size() < 4
+			|| texturePath.substr(texturePath.size() - 4) != ".ppm")
+			return m_fallbackTexture;
+
+		return loadTexture(texturePath);
+	}
+
+	void	App::preloadModelTextures()
+	{
+		const std::vector<ModelPart>& parts = m_model->getParts();
+
+		for (std::size_t i = 0; i < parts.size(); ++i)
+			getTextureForPart(parts[i]);
 	}
 
 	void	App::render()
@@ -138,26 +222,29 @@ namespace Scop
 		Math::Mat4 translation = Math::Mat4::translation(m_position);
 
 		Math::Mat4 model = translation * rotation * scale * toOrigin;
-		Math::Mat4 view = Math::Mat4::translation({0.0f, 0.0f, -Config::CAMERA_DISTANCE});
+		Math::Mat4 view = m_camera->getViewMatrix();
 
-		float aspectRatio = static_cast<float>(m_window.getWidth())
-			/ static_cast<float>(m_window.getHeight());
-
-		Math::Mat4 projection = Math::Mat4::perspective(
-			Config::PROJECTION_FOV_RADIANS,
-			aspectRatio,
-			Config::PROJECTION_NEAR_PLANE,
-			Config::PROJECTION_FAR_PLANE);
+		Math::Mat4 projection = m_camera->getProjectionMatrix(m_window.getWidth(),
+			m_window.getHeight());
 
 		Math::Mat4 mvp = projection * view * model;
 
 		m_shader->use();
 		m_shader->setMat4("uMVP", mvp);
 		m_shader->setInt("uTexture", 0);
-		m_shader->setFloat("uTextureBlend", 1.0f);
-		glActiveTexture(GL_TEXTURE0);
-		m_texture->bind();
-		m_model->draw();
+		m_shader->setFloat("uTextureBlend", m_textureBlend);
+		const std::vector<ModelPart>& parts = m_model->getParts();
+
+		for (std::size_t i = 0; i < parts.size(); ++i)
+		{
+			Texture* texture = getTextureForPart(parts[i]);
+
+			glActiveTexture(GL_TEXTURE0);
+			texture->bind();
+
+			if (parts[i].mesh != nullptr)
+				parts[i].mesh->draw();
+		}
 	}
 
 	void	App::initScene()
@@ -166,17 +253,29 @@ namespace Scop
 		const std::string	fragmentShaderPath = "assets/shaders/basic.frag";
 
 		m_shader = new Shader(vertexShaderPath, fragmentShaderPath);
+		m_camera = new Camera(
+			Config::CAMERA_DISTANCE,
+			Config::PROJECTION_FOV_RADIANS,
+			Config::PROJECTION_NEAR_PLANE,
+			Config::PROJECTION_FAR_PLANE);
 		m_model = ObjLoader::load(Config::MODEL_PATH);
-		m_texture = new Texture(Config::TEXTURE_PATH);
+
+		m_fallbackTexture = loadTexture(Config::TEXTURE_PATH);
+		preloadModelTextures();
 	}
 
 	void	App::cleanupScene()
 	{
-		if (m_texture != nullptr)
+		for (std::size_t i = 0; i < m_loadedTextures.size(); ++i)
 		{
-			delete m_texture;
-			m_texture = nullptr;
+			if (m_loadedTextures[i].texture != nullptr)
+			{
+				delete m_loadedTextures[i].texture;
+				m_loadedTextures[i].texture = nullptr;
+			}
 		}
+		m_loadedTextures.clear();
+		m_fallbackTexture = nullptr;
 		if (m_model != nullptr)
 		{
 			delete m_model;
@@ -187,6 +286,12 @@ namespace Scop
 		{
 			delete m_shader;
 			m_shader = nullptr;
+		}
+
+		if (m_camera != nullptr)
+		{
+			delete m_camera;
+			m_camera = nullptr;
 		}
 	}
 }

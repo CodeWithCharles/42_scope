@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Material.hpp"
-#include "Mesh.hpp"
+#include "scene/Material.hpp"
+#include "render/Mesh.hpp"
 
 #include <string>
 #include <vector>
@@ -42,6 +42,8 @@ namespace Scop
 
 			const	std::vector<ModelPart>&	getParts() const;
 			const	std::vector<Material>&	getMaterials() const;
+			const	Material*				findMaterialByName(const std::string& name) const;
+			std::string						findFirstDiffuseTexturePath() const;
 
 			const Math::Vec3&	getMinBounds() const;
 			const Math::Vec3&	getMaxBounds() const;
