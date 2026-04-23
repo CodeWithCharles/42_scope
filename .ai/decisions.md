@@ -22,6 +22,9 @@
 - Les chemins `map_Kd` sont resolves au chargement relativement au dossier du fichier `.mtl`, pas au cwd ni directement au dossier du `.obj`.
 - Tant que le projet ne supporte officiellement que les textures `PPM`, `App` n'auto-charge la texture diffuse d'un modele que si le chemin resolu pointe vers un `.ppm`; sinon il retombe sur `Config::TEXTURE_PATH`.
 - La convention d'import UV retenue est un flip global de la coordonnee `V`, applique uniquement aux vertices qui ont effectivement un `vt`, afin de rester compatible avec les modeles sans UV.
+- Une petite classe `Camera` dediee porte desormais les matrices `view` et `projection`, pour alleger `App` sans introduire une scene generique prematuree.
+- Le rendu texture se fait desormais par `ModelPart`, avec choix de texture par materiau et cache de textures cote `App`.
+- L'arborescence du projet est maintenant rangee par domaines (`app`, `core`, `io`, `render`, `scene`, `system`, `math`) plutot que de laisser tous les fichiers a plat dans `include/` et `src/`.
 
 ## Regle d'entretien
 

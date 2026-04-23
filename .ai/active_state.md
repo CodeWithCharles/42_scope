@@ -26,7 +26,10 @@
 - `Model` expose `findMaterialByName()` et `findFirstDiffuseTexturePath()`
 - `ObjLoader` resout `map_Kd` relativement au dossier du `.mtl`
 - `ObjLoader` applique maintenant un flip global de la coordonnee UV `V` a l'import, uniquement quand `vt` est present
-- `App` tente d'utiliser la premiere texture diffuse du modele si c'est un `.ppm`, sinon fallback sur `Config::TEXTURE_PATH`
+- `Camera` porte maintenant le calcul de `view` et `projection`
+- `App` rend maintenant le `Model` par `ModelPart`
+- `App` garde une texture fallback et un cache de textures chargees
+- rendu texture valide sur `test`, `babem` et `watchtower`
 
 ## Etat reel du chantier
 
@@ -37,7 +40,8 @@ Le rendu texture fonctionne sur un asset de test maitrise, et le toggle mandator
 - `Config::MODEL_PATH` pointe actuellement sur `assets/models/Watchtower/wooden_watch_tower2.obj`
 - `Config::TEXTURE_PATH` pointe actuellement sur `assets/textures/test.ppm`
 - `T` alterne bien entre couleurs vertex et texture avec transition douce
-- le fallback sur `test.ppm` reste stable meme quand le modele reference une texture non supportee
+- le fallback sur `test.ppm` reste stable meme quand un materiau reference une texture non supportee
+- le rendu passe maintenant par partie, avec choix de texture par materiau quand un `PPM` est disponible
 
 La Watchtower a servi de validation utile :
 
@@ -53,8 +57,9 @@ La Watchtower a servi de validation utile :
    - soit convertir / fournir des textures `PPM`
    - soit ajouter un support image plus large
 2. Valider un vrai couple modele + texture diffuse exploitable pour la defense.
-3. Si besoin, enrichir la logique texture pour gerer plus d'un materiau texture dans un meme modele.
-4. Nettoyer ensuite les petits ecarts restants de style / robustesse, mais sans rouvrir inutilement le pipeline texture deja valide.
+3. Sortir le chargement de textures du chemin de rendu si on veut figer proprement le cache avant le premier frame.
+4. Si besoin, enrichir encore la logique texture pour gerer plusieurs cas de materiaux plus avances.
+5. Continuer le nettoyage architectural apres le refacto d'arborescence.
 
 ## Blocages / points de vigilance
 
@@ -62,7 +67,7 @@ La Watchtower a servi de validation utile :
 - Les tokens OBJ `g` et `s` apparaissent dans certains assets reels, mais ce n'est pas bloquant pour finir le chemin critique mandatory.
 - Le loader texture actuel reste limite au `PPM` (`P3` / `P6`).
 - La Watchtower reference `map_Kd textures\\t_C_3.png`, mais le repo contient surtout `textures/Wood_Tower_Col.jpg` : il y a probablement un decalage entre le `.mtl` et les assets reels.
-- Le fallback actuel charge une seule texture pour tout le modele ; c'est volontairement simple pour finir le mandatory, mais pas encore un pipeline multi-texture complet.
+- Le rendu par `ModelPart` est en place, mais le cache de textures vit encore dans `App`.
 - Le flip `V` ne doit jamais etre applique hors du chemin ou `textureIndex >= 0`, sinon les modeles sans `vt` comme `cessna.obj` plantent.
 
 ## Prochain pas recommande
@@ -76,19 +81,23 @@ Choisir et valider un vrai chemin de texture de defense :
 
 ## Fichiers a regarder d'abord
 
-- `include/App.hpp`
-- `src/App.cpp`
-- `include/Model.hpp`
-- `src/Model.cpp`
-- `src/ObjLoader.cpp`
-- `include/Texture.hpp`
-- `src/Texture.cpp`
-- `include/Config.hpp`
+- `include/app/App.hpp`
+- `src/app/App.cpp`
+- `include/render/Camera.hpp`
+- `src/render/Camera.cpp`
+- `include/scene/Model.hpp`
+- `src/scene/Model.cpp`
+- `include/io/ObjLoader.hpp`
+- `src/io/ObjLoader.cpp`
+- `include/render/Texture.hpp`
+- `src/render/Texture.cpp`
+- `include/core/Config.hpp`
 
 ## Notes de reprise
 
 - Le toggle + blend mandatory sont termines et valides visuellement.
 - La convention UV actuellement validee est : flip global de `V` a l'import, uniquement pour les sommets qui ont des coordonnees de texture.
+- L'arborescence a ete reorganisee en sous-dossiers (`app`, `core`, `io`, `render`, `scene`, `system`, `math`).
 - Si le rendu parait flou sur `test.ppm`, c'est normal avec une texture minuscule et les filtres lineaires.
 - Pour debugger la texture plus lisiblement, on peut temporairement passer en `GL_NEAREST`, mais ce n'est pas le chemin critique.
-- Tant que le projet reste en `PPM only`, `App` garde un fallback simple sur `Config::TEXTURE_PATH` pour ne pas casser les assets qui referencent du `jpg/png`.
+- Tant que le projet reste en `PPM only`, `App` garde une texture fallback simple sur `Config::TEXTURE_PATH` pour ne pas casser les assets qui referencent du `jpg/png`.
