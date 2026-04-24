@@ -5,6 +5,9 @@
 #include "scene/Model.hpp"
 #include "render/Texture.hpp"
 #include "render/Camera.hpp"
+#include "app/AppOptions.hpp"
+#include "render/RenderState.hpp"
+#include "app/InputController.hpp"
 
 #include "math/Mat4.hpp"
 #include "math/Vec3.hpp"
@@ -22,6 +25,7 @@ namespace Scop
 		};
 
 		private:
+			AppOptions m_options;
 			Window						m_window;
 			bool						m_isRunning;
 			Shader						*m_shader;
@@ -29,16 +33,15 @@ namespace Scop
 			Model						*m_model;
 			Texture						*m_fallbackTexture;
 			std::vector<LoadedTexture>	m_loadedTextures;
-			float						m_textureBlend;
-			bool						m_textureEnabled;
-			bool						m_textureTogglePressed;
+			RenderState					m_renderState;
+			InputController				m_inputController;
 			float						m_rotationAngle;
 			float						m_deltaTime;
 			float						m_lastFrameTime;
 			Math::Vec3					m_position;
 
 		public:
-			App();
+			App(const AppOptions& options);
 			~App();
 
 			App(const App&) = delete;
@@ -59,6 +62,9 @@ namespace Scop
 
 			Texture*	findLoadedTexture(const std::string& path) const;
 			Texture*	loadTexture(const std::string& path);
-			Texture*	getTextureForPart(const ModelPart& part);
+			Texture*	getMaterialTextureForPart(const ModelPart& part);
+			Texture*	selectTextureForPart(const ModelPart& part);
+			float		getTextureBlendForRender() const;
+			void		applyPolygonMode() const;
 	};
 }

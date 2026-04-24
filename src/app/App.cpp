@@ -9,10 +9,22 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+	float	clampFloat(float value, float minValue, float maxValue)
+	{
+		if (value < minValue)
+			return minValue;
+		if (value > maxValue)
+			return maxValue;
+		return value;
+	}
+}
 namespace Scop
 {
-	App::App()
-		: m_window(
+	App::App(const AppOptions& options)
+		: m_options(options),
+		  m_window(
 			Config::WINDOW_WIDTH,
 			Config::WINDOW_HEIGHT,
 			Config::WINDOW_TITLE),
@@ -21,9 +33,7 @@ namespace Scop
 		  m_camera(nullptr),
 		  m_model(nullptr),
 		  m_fallbackTexture(nullptr),
-		  m_textureBlend(1.0f),
-		  m_textureEnabled(true),
-		  m_textureTogglePressed(false),
+		  m_renderState(),
 		  m_rotationAngle(0.0f),
 		  m_deltaTime(0.0f),
 		  m_lastFrameTime(0.0f),
@@ -72,42 +82,20 @@ namespace Scop
 	void	App::configureOpenGL()
 	{
 		glViewport(0, 0, m_window.getWidth(), m_window.getHeight());
+		glPointSize(1.1f);
 		glEnable(GL_DEPTH_TEST);
 	}
 
 	void	App::processInput()
 	{
 		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		m_window.setShouldClose(true);
+			m_window.setShouldClose(true);
 
-		float translationStep = Config::TRANSLATION_SPEED_UNITS_PER_SECOND * m_deltaTime;
-
-		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_A) == GLFW_PRESS)
-			m_position.x += translationStep;
-		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_D) == GLFW_PRESS)
-			m_position.x -= translationStep;
-
-		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_S) == GLFW_PRESS)
-			m_position.y += translationStep;
-		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_W) == GLFW_PRESS)
-			m_position.y -= translationStep;
-
-		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_Q) == GLFW_PRESS)
-			m_position.z -= translationStep;
-		if (glfwGetKey(m_window.getHandle(), GLFW_KEY_E) == GLFW_PRESS)
-			m_position.z += translationStep;
-
-		int	textureToggleState = glfwGetKey(m_window.getHandle(), GLFW_KEY_T);
-
-		if (textureToggleState == GLFW_PRESS && !m_textureTogglePressed)
-		{
-			m_textureEnabled = !m_textureEnabled;
-			m_textureTogglePressed = true;
-		}
-		else if (textureToggleState == GLFW_RELEASE)
-		{
-			m_textureTogglePressed = false;
-		}
+		m_inputController.update(
+			m_window.getHandle(),
+			m_deltaTime,
+			m_position,
+			m_renderState);
 	}
 
 	void	App::update()
@@ -118,22 +106,6 @@ namespace Scop
 			m_deltaTime = 0.1f;
 
 		m_rotationAngle += Config::ROTATION_SPEED_RADIANS_PER_SECOND * m_deltaTime;
-
-		float	targetBlend = m_textureEnabled ? 1.0f : 0.0f;
-		float	blendStep = 2.0f * m_deltaTime;
-
-		if (m_textureBlend < targetBlend)
-		{
-			m_textureBlend += blendStep;
-			if (m_textureBlend > targetBlend)
-				m_textureBlend = targetBlend;
-		}
-		else if (m_textureBlend > targetBlend)
-		{
-			m_textureBlend -= blendStep;
-			if (m_textureBlend < targetBlend)
-				m_textureBlend = targetBlend;
-		}
 	}
 
 	Texture*	App::findLoadedTexture(const std::string& path) const
@@ -161,28 +133,12 @@ namespace Scop
 		return loadedTexture.texture;
 	}
 
-	Texture*	App::getTextureForPart(const ModelPart& part)
-	{
-		const Material*	material = m_model->findMaterialByName(part.materialName);
-
-		if (material == nullptr || material->diffuseTexturePath.empty())
-			return m_fallbackTexture;
-
-		const std::string& texturePath = material->diffuseTexturePath;
-
-		if (texturePath.size() < 4
-			|| texturePath.substr(texturePath.size() - 4) != ".ppm")
-			return m_fallbackTexture;
-
-		return loadTexture(texturePath);
-	}
-
 	void	App::preloadModelTextures()
 	{
 		const std::vector<ModelPart>& parts = m_model->getParts();
 
 		for (std::size_t i = 0; i < parts.size(); ++i)
-			getTextureForPart(parts[i]);
+			getMaterialTextureForPart(parts[i]);
 	}
 
 	void	App::render()
@@ -232,12 +188,13 @@ namespace Scop
 		m_shader->use();
 		m_shader->setMat4("uMVP", mvp);
 		m_shader->setInt("uTexture", 0);
-		m_shader->setFloat("uTextureBlend", m_textureBlend);
+		m_shader->setFloat("uTextureBlend", getTextureBlendForRender());
+		applyPolygonMode();
 		const std::vector<ModelPart>& parts = m_model->getParts();
 
 		for (std::size_t i = 0; i < parts.size(); ++i)
 		{
-			Texture* texture = getTextureForPart(parts[i]);
+			Texture* texture = selectTextureForPart(parts[i]);
 
 			glActiveTexture(GL_TEXTURE0);
 			texture->bind();
@@ -251,6 +208,10 @@ namespace Scop
 	{
 		const std::string	vertexShaderPath = "assets/shaders/basic.vert";
 		const std::string	fragmentShaderPath = "assets/shaders/basic.frag";
+		const std::string&	modelPath = m_options.modelPath;
+		const std::string&	fallbackTexturePath = m_options.fallbackTexturePath.empty()
+			? std::string(Config::TEXTURE_PATH)
+			: m_options.fallbackTexturePath;
 
 		m_shader = new Shader(vertexShaderPath, fragmentShaderPath);
 		m_camera = new Camera(
@@ -258,9 +219,10 @@ namespace Scop
 			Config::PROJECTION_FOV_RADIANS,
 			Config::PROJECTION_NEAR_PLANE,
 			Config::PROJECTION_FAR_PLANE);
-		m_model = ObjLoader::load(Config::MODEL_PATH);
 
-		m_fallbackTexture = loadTexture(Config::TEXTURE_PATH);
+		m_model = ObjLoader::load(modelPath);
+		m_fallbackTexture = loadTexture(fallbackTexturePath);
+
 		preloadModelTextures();
 	}
 
@@ -293,5 +255,44 @@ namespace Scop
 			delete m_camera;
 			m_camera = nullptr;
 		}
+	}
+
+	Texture*	App::getMaterialTextureForPart(const ModelPart& part)
+	{
+		const Material*	material = m_model->findMaterialByName(part.materialName);
+
+		if (material == nullptr || material->diffuseTexturePath.empty())
+			return m_fallbackTexture;
+
+		const std::string& texturePath = material->diffuseTexturePath;
+
+		if (texturePath.size() < 4
+			|| texturePath.substr(texturePath.size() - 4) != ".ppm")
+			return m_fallbackTexture;
+
+		return loadTexture(texturePath);
+	}
+
+	Texture*	App::selectTextureForPart(const ModelPart& part)
+	{
+		if (m_renderState.textureSourceMode == TextureSourceMode::MaterialTexture)
+			return getMaterialTextureForPart(part);
+		return m_fallbackTexture;
+	}
+
+	float	App::getTextureBlendForRender() const
+	{
+		if (m_renderState.textureSourceMode == TextureSourceMode::PolygonColor)
+			return 0.0f;
+		return m_renderState.textureBlend;
+	}
+
+	void	App::applyPolygonMode() const
+	{
+
+		GLenum mode = m_renderState.polygonMode == PolygonMode::Wireframe
+			? GL_LINE : m_renderState.polygonMode == PolygonMode::Point
+			? GL_POINT : GL_FILL;
+		glPolygonMode(GL_FRONT_AND_BACK, mode);
 	}
 }
