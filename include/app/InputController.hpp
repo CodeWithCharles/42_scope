@@ -29,10 +29,16 @@ namespace Scop
 
 			void	handleTextureMode(
 				GLFWwindow* window,
+				float deltaTime,
 				RenderState& renderState);
 
 			void	handlePolygonMode(
 				GLFWwindow* window,
+				RenderState& renderState);
+
+			void	handleTextureBlend(
+				GLFWwindow* window,
+				float deltaTime,
 				RenderState& renderState);
 
 			void	cycleTextureSourceMode(RenderState& renderState);

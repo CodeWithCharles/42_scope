@@ -26,6 +26,14 @@
 - Le rendu texture se fait desormais par `ModelPart`, avec choix de texture par materiau et cache de textures cote `App`.
 - L'arborescence du projet est maintenant rangee par domaines (`app`, `core`, `io`, `render`, `scene`, `system`, `math`) plutot que de laisser tous les fichiers a plat dans `include/` et `src/`.
 
+## 2026-04-24
+
+- Le modele a charger et la texture fallback optionnelle sont maintenant passes par la CLI (`./scop <model.obj> [fallback_texture.ppm]`) plutot que relies uniquement a `Config`, pour permettre des tests rapides sans recompilation.
+- Les controles runtime sont centralises dans `InputController`, afin d'eviter que `App` accumule la logique clavier et les anti-rebonds.
+- Le cache texture, la texture fallback et le choix `FallbackTexture` / `MaterialTexture` sont centralises dans `TextureLibrary`, pour sortir la logique texture de `App`.
+- Le calcul de la matrice `model` et du `mvp` est centralise dans `ModelTransformBuilder`, pour garder `App::render()` focalise sur l'orchestration du rendu.
+- La source texture runtime est maintenant un vrai mode a 3 etats (`PolygonColor`, `FallbackTexture`, `MaterialTexture`) ; `PolygonColor` force explicitement un blend de texture a `0.0` au rendu au lieu d'etre un faux mode implicite.
+
 ## Regle d'entretien
 
 Ajouter ici uniquement les decisions qui :

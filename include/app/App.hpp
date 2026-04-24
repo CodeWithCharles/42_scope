@@ -3,11 +3,11 @@
 #include "system/Window.hpp"
 #include "render/Shader.hpp"
 #include "scene/Model.hpp"
-#include "render/Texture.hpp"
 #include "render/Camera.hpp"
 #include "app/AppOptions.hpp"
 #include "render/RenderState.hpp"
 #include "app/InputController.hpp"
+#include "render/TextureLibrary.hpp"
 
 #include "math/Mat4.hpp"
 #include "math/Vec3.hpp"
@@ -18,12 +18,6 @@ namespace Scop
 {
 	class App
 	{
-		struct LoadedTexture
-		{
-			std::string	path;
-			Texture*	texture;
-		};
-
 		private:
 			AppOptions m_options;
 			Window						m_window;
@@ -31,8 +25,7 @@ namespace Scop
 			Shader						*m_shader;
 			Camera						*m_camera;
 			Model						*m_model;
-			Texture						*m_fallbackTexture;
-			std::vector<LoadedTexture>	m_loadedTextures;
+			TextureLibrary				m_textureLibrary;
 			RenderState					m_renderState;
 			InputController				m_inputController;
 			float						m_rotationAngle;
@@ -58,12 +51,8 @@ namespace Scop
 			void		render();
 			void		initScene();
 			void		cleanupScene();
-			void		preloadModelTextures();
+			void		renderModelParts();
 
-			Texture*	findLoadedTexture(const std::string& path) const;
-			Texture*	loadTexture(const std::string& path);
-			Texture*	getMaterialTextureForPart(const ModelPart& part);
-			Texture*	selectTextureForPart(const ModelPart& part);
 			float		getTextureBlendForRender() const;
 			void		applyPolygonMode() const;
 	};

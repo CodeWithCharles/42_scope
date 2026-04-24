@@ -19,7 +19,7 @@ namespace Scop
 		RenderState& renderState)
 	{
 		handleMovement(window, deltaTime, position);
-		handleTextureMode(window, renderState);
+		handleTextureMode(window, deltaTime, renderState);
 		handlePolygonMode(window, renderState);
 	}
 
@@ -48,6 +48,7 @@ namespace Scop
 
 	void	InputController::handleTextureMode(
 		GLFWwindow* window,
+		float deltaTime,
 		RenderState& renderState)
 	{
 		int	textureToggleState = glfwGetKey(window, GLFW_KEY_T);
@@ -60,6 +61,30 @@ namespace Scop
 		else if (textureToggleState == GLFW_RELEASE)
 		{
 			m_textureModeTogglePressed = false;
+		}
+
+		handleTextureBlend(window, deltaTime, renderState);
+	}
+
+	void	InputController::handleTextureBlend(
+		GLFWwindow* window,
+		float deltaTime,
+		RenderState& renderState)
+	{
+		float blendStep = Config::TEXTURE_BLEND_SPEED_PER_SECOND * deltaTime;
+
+		if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
+		{
+			renderState.textureBlend -= blendStep;
+			if (renderState.textureBlend < 0.0f)
+				renderState.textureBlend = 0.0f;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS)
+		{
+			renderState.textureBlend += blendStep;
+			if (renderState.textureBlend > 1.0f)
+				renderState.textureBlend = 1.0f;
 		}
 	}
 

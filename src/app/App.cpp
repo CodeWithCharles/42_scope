@@ -4,22 +4,10 @@
 #include "app/App.hpp"
 #include "core/Config.hpp"
 #include "io/ObjLoader.hpp"
+#include "render/ModelTransformBuilder.hpp"
 
 #include <stdexcept>
-#include <string>
-#include <vector>
 
-namespace
-{
-	float	clampFloat(float value, float minValue, float maxValue)
-	{
-		if (value < minValue)
-			return minValue;
-		if (value > maxValue)
-			return maxValue;
-		return value;
-	}
-}
 namespace Scop
 {
 	App::App(const AppOptions& options)
@@ -32,7 +20,7 @@ namespace Scop
 		  m_shader(nullptr),
 		  m_camera(nullptr),
 		  m_model(nullptr),
-		  m_fallbackTexture(nullptr),
+		  m_textureLibrary(),
 		  m_renderState(),
 		  m_rotationAngle(0.0f),
 		  m_deltaTime(0.0f),
@@ -82,7 +70,7 @@ namespace Scop
 	void	App::configureOpenGL()
 	{
 		glViewport(0, 0, m_window.getWidth(), m_window.getHeight());
-		glPointSize(1.1f);
+		glPointSize(1.5f);
 		glEnable(GL_DEPTH_TEST);
 	}
 
@@ -108,39 +96,6 @@ namespace Scop
 		m_rotationAngle += Config::ROTATION_SPEED_RADIANS_PER_SECOND * m_deltaTime;
 	}
 
-	Texture*	App::findLoadedTexture(const std::string& path) const
-	{
-		for (std::size_t i = 0; i < m_loadedTextures.size(); ++i)
-		{
-			if (m_loadedTextures[i].path == path)
-				return m_loadedTextures[i].texture;
-		}
-		return nullptr;
-	}
-
-	Texture*	App::loadTexture(const std::string& path)
-	{
-		Texture*	existingTexture = findLoadedTexture(path);
-
-		if (existingTexture != nullptr)
-			return existingTexture;
-
-		LoadedTexture loadedTexture;
-		loadedTexture.path = path;
-		loadedTexture.texture = new Texture(path);
-
-		m_loadedTextures.push_back(loadedTexture);
-		return loadedTexture.texture;
-	}
-
-	void	App::preloadModelTextures()
-	{
-		const std::vector<ModelPart>& parts = m_model->getParts();
-
-		for (std::size_t i = 0; i < parts.size(); ++i)
-			getMaterialTextureForPart(parts[i]);
-	}
-
 	void	App::render()
 	{
 		glClearColor(
@@ -150,58 +105,23 @@ namespace Scop
 			Config::CLEAR_ALPHA);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		Math::Vec3 center = m_model->getCenter();
-		Math::Vec3 size = m_model->getSize();
-
-		float maxExtent = size.x;
-
-		if (size.y > maxExtent)
-			maxExtent = size.y;
-		if (size.z > maxExtent)
-			maxExtent = size.z;
-
-		float scaleFactor = 1.0f;
-		if (maxExtent > 0.0f)
-			scaleFactor = 1.0f / maxExtent;
-
-		Math::Mat4 toOrigin = Math::Mat4::translation({
-			-center.x,
-			-center.y,
-			-center.z
-		});
-
-		Math::Mat4 scale = Math::Mat4::scale({scaleFactor, scaleFactor, scaleFactor});
-		Math::Mat4 importRotation = Math::Mat4::rotationX(Config::MODEL_IMPORT_ROTATION_X_RADIANS);
-		Math::Mat4 animationRotation = Math::Mat4::rotationY(m_rotationAngle);
-		Math::Mat4 rotation = animationRotation * importRotation;
-		// Math::Mat4 backToCenter = Math::Mat4::translation(center);
-		Math::Mat4 translation = Math::Mat4::translation(m_position);
-
-		Math::Mat4 model = translation * rotation * scale * toOrigin;
-		Math::Mat4 view = m_camera->getViewMatrix();
-
-		Math::Mat4 projection = m_camera->getProjectionMatrix(m_window.getWidth(),
+		Math::Mat4 mvp = ModelTransformBuilder::buildMvpMatrix(
+			*m_model,
+			*m_camera,
+			m_position,
+			m_rotationAngle,
+			Config::MODEL_IMPORT_ROTATION_X_RADIANS,
+			m_window.getWidth(),
 			m_window.getHeight());
 
-		Math::Mat4 mvp = projection * view * model;
 
 		m_shader->use();
 		m_shader->setMat4("uMVP", mvp);
 		m_shader->setInt("uTexture", 0);
 		m_shader->setFloat("uTextureBlend", getTextureBlendForRender());
+
 		applyPolygonMode();
-		const std::vector<ModelPart>& parts = m_model->getParts();
-
-		for (std::size_t i = 0; i < parts.size(); ++i)
-		{
-			Texture* texture = selectTextureForPart(parts[i]);
-
-			glActiveTexture(GL_TEXTURE0);
-			texture->bind();
-
-			if (parts[i].mesh != nullptr)
-				parts[i].mesh->draw();
-		}
+		renderModelParts();
 	}
 
 	void	App::initScene()
@@ -221,23 +141,12 @@ namespace Scop
 			Config::PROJECTION_FAR_PLANE);
 
 		m_model = ObjLoader::load(modelPath);
-		m_fallbackTexture = loadTexture(fallbackTexturePath);
-
-		preloadModelTextures();
+		m_textureLibrary.initialize(fallbackTexturePath);
+		m_textureLibrary.preloadModelTextures(*m_model);
 	}
 
 	void	App::cleanupScene()
 	{
-		for (std::size_t i = 0; i < m_loadedTextures.size(); ++i)
-		{
-			if (m_loadedTextures[i].texture != nullptr)
-			{
-				delete m_loadedTextures[i].texture;
-				m_loadedTextures[i].texture = nullptr;
-			}
-		}
-		m_loadedTextures.clear();
-		m_fallbackTexture = nullptr;
 		if (m_model != nullptr)
 		{
 			delete m_model;
@@ -257,29 +166,6 @@ namespace Scop
 		}
 	}
 
-	Texture*	App::getMaterialTextureForPart(const ModelPart& part)
-	{
-		const Material*	material = m_model->findMaterialByName(part.materialName);
-
-		if (material == nullptr || material->diffuseTexturePath.empty())
-			return m_fallbackTexture;
-
-		const std::string& texturePath = material->diffuseTexturePath;
-
-		if (texturePath.size() < 4
-			|| texturePath.substr(texturePath.size() - 4) != ".ppm")
-			return m_fallbackTexture;
-
-		return loadTexture(texturePath);
-	}
-
-	Texture*	App::selectTextureForPart(const ModelPart& part)
-	{
-		if (m_renderState.textureSourceMode == TextureSourceMode::MaterialTexture)
-			return getMaterialTextureForPart(part);
-		return m_fallbackTexture;
-	}
-
 	float	App::getTextureBlendForRender() const
 	{
 		if (m_renderState.textureSourceMode == TextureSourceMode::PolygonColor)
@@ -294,5 +180,24 @@ namespace Scop
 			? GL_LINE : m_renderState.polygonMode == PolygonMode::Point
 			? GL_POINT : GL_FILL;
 		glPolygonMode(GL_FRONT_AND_BACK, mode);
+	}
+
+	void	App::renderModelParts()
+	{
+		const std::vector<ModelPart>& parts = m_model->getParts();
+
+		for (std::size_t i = 0; i < parts.size(); ++i)
+		{
+			Texture* texture = m_textureLibrary.getTextureForPart(
+				*m_model,
+				parts[i],
+				m_renderState.textureSourceMode);
+
+			glActiveTexture(GL_TEXTURE0);
+			texture->bind();
+
+			if (parts[i].mesh != nullptr)
+				parts[i].mesh->draw();
+		}
 	}
 }
